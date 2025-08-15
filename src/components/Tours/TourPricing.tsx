@@ -2,22 +2,8 @@
 
 const TourPricing = () => {
   const handleDownloadItinerary = () => {
-    try {
-      // Create a temporary anchor element to trigger the download
-      const link = document.createElement('a');
-      link.href = '/pdfs/Roamevo Uttarakhand 2025.pdf';
-      link.download = 'Roamevo-Uttarakhand-2025-Itinerary.pdf';
-      link.target = '_blank';
-      
-      // Append to body, click, and remove
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    } catch (error) {
-      console.error('Error downloading file:', error);
-      // Fallback: open in new tab
-      window.open('/pdfs/Roamevo Uttarakhand 2025.pdf', '_blank');
-    }
+    // PDF temporarily unavailable - show message to user
+    alert('Itinerary download is temporarily unavailable. Please contact us for more information.');
   };
 
   return (

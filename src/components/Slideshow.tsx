@@ -109,6 +109,7 @@ const HeroSlideshow = ({ onSlideChange }: HeroSlideshowProps) => {
               }`}
               onClick={() => setCurrentImageIndex(index)}
               aria-label={`Go to slide ${index + 1}`}
+              suppressHydrationWarning={true}
             />
           ))}
         </div>

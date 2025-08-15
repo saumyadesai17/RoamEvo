@@ -29,6 +29,7 @@ const SearchBar = () => {
         className="w-full pl-10 pr-4 py-2.5 rounded-full border border-white focus:outline-none focus:ring-2 focus:ring-blue-500 bg-transparent bg-opacity-90 text-white placeholder-white"
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
+        suppressHydrationWarning={true}
       />
     </div>
   );
