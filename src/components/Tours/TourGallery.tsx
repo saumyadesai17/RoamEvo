@@ -9,9 +9,10 @@ interface TourGalleryProps {
     src: string;
     alt: string;
   }[];
+  title?: string;
 }
 
-const TourGallery = ({ images }: TourGalleryProps) => {
+const TourGallery = ({ images, title }: TourGalleryProps) => {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [showFullGallery, setShowFullGallery] = useState(false);
   const thumbnailContainerRef = useRef<HTMLDivElement>(null);
@@ -83,9 +84,8 @@ const TourGallery = ({ images }: TourGalleryProps) => {
               priority
             />
             <div className="absolute inset-0 bg-gradient-to-r from-black/50 to-transparent flex items-center justify-center">
-              <div className="text-white text-4xl xl:text-5xl 2xl:text-6xl font-bold tracking-wider text-center">
-                <div>UTTARAKHAND</div>
-                <div className="text-right -mt-1 xl:-mt-2 2xl:-mt-3 text-2xl xl:text-3xl 2xl:text-4xl">2025</div>
+              <div className="text-white text-4xl xl:text-5xl 2xl:text-6xl font-bold tracking-wider text-center px-4 uppercase">
+                {title || 'ROAMEVO'}
               </div>
             </div>
           </div>
@@ -141,9 +141,8 @@ const TourGallery = ({ images }: TourGalleryProps) => {
               priority
             />
             <div className="absolute inset-0 bg-gradient-to-r from-black/50 to-transparent flex items-center justify-center">
-              <div className="text-white text-2xl sm:text-3xl md:text-4xl font-bold tracking-wider text-center">
-                <div>UTTARAKHAND</div>
-                <div className="text-right -mt-1 text-lg sm:text-xl md:text-2xl">2025</div>
+              <div className="text-white text-2xl sm:text-3xl md:text-4xl font-bold tracking-wider text-center px-4 uppercase">
+                {title || 'ROAMEVO'}
               </div>
             </div>
           </div>

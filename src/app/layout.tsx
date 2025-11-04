@@ -2,8 +2,7 @@ import type { Metadata } from "next";
 import { Gideon_Roman } from "next/font/google";
 import { Montserrat } from "next/font/google";
 import "./globals.css";
-import NavbarWrapper from "@/components/NavbarWrapper";
-import Footer from "@/components/Footer";
+import ConditionalLayout from "@/components/ConditionalLayout";
 import StructuredData from "@/components/StructuredData";
 
 const gideonRoman = Gideon_Roman({
@@ -123,11 +122,7 @@ export default function RootLayout({
       <body
         className={`${gideonRoman.className} ${montserrat.variable} antialiased`}
       >
-        <NavbarWrapper />
-        <main className="min-h-screen">
-          {children}
-        </main>
-        <Footer />
+        <ConditionalLayout>{children}</ConditionalLayout>
       </body>
     </html>
   );

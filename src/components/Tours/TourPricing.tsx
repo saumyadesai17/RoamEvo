@@ -1,15 +1,31 @@
 'use client';
 
-const TourPricing = () => {
+import { TourPricingProps } from '@/types/tour';
+
+const TourPricing = ({ price, currency = 'INR', pdfItinerary }: TourPricingProps) => {
   const handleDownloadItinerary = () => {
-    // PDF temporarily unavailable - show message to user
-    alert('Itinerary download is temporarily unavailable. Please contact us for more information.');
+    if (pdfItinerary) {
+      // Open PDF in new tab
+      window.open(pdfItinerary, '_blank');
+    } else {
+      // PDF not available - show message to user
+      alert('Itinerary download is temporarily unavailable. Please contact us for more information.');
+    }
+  };
+
+  const formatPrice = (amount: number, curr: string) => {
+    if (curr === 'INR') {
+      return `₹${amount.toLocaleString('en-IN')}`;
+    }
+    return `${curr} ${amount.toLocaleString()}`;
   };
 
   return (
     <div className="space-y-2 sm:space-y-3 2xl:space-y-4">
       <h3 className="text-lg sm:text-xl lg:text-2xl 2xl:text-3xl text-gray-600 mb-2 2xl:mb-3">Price Per Person</h3>
-      <div className="text-2xl sm:text-3xl lg:text-4xl 2xl:text-5xl font-bold text-[#4A5B2D] mb-3 sm:mb-4 2xl:mb-6">₹17,999</div>
+      <div className="text-2xl sm:text-3xl lg:text-4xl 2xl:text-5xl font-bold text-[#4A5B2D] mb-3 sm:mb-4 2xl:mb-6">
+        {formatPrice(price, currency)}
+      </div>
       
       <a
         href="tel:+919665398773"

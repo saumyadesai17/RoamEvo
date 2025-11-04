@@ -1,40 +1,56 @@
-const TripVibeCheck = () => {
+import { TripVibeCheckProps } from '@/types/tour';
+
+const TripVibeCheck = ({
+  adventureLevel = 0,
+  spiritualLevel = 0,
+  chillLevel = 0,
+  natureLevel = 0,
+  culturalLevel = 0,
+}: TripVibeCheckProps) => {
   const vibes = [
     {
       category: 'Adventure',
-      level: 4,
+      level: adventureLevel,
       icon: '🔥',
+      color: 'text-orange-500',
     },
     {
       category: 'Nature',
-      level: 5,
+      level: natureLevel,
       icon: '🌲',
+      color: 'text-green-500',
     },
     {
       category: 'Spiritual',
-      level: 3,
+      level: spiritualLevel,
       icon: '🙏',
+      color: 'text-yellow-500',
     },
     {
       category: 'Chill',
-      level: 3,
+      level: chillLevel,
       icon: '😎',
-    }
-  ];
+      color: 'text-blue-500',
+    },
+    {
+      category: 'Cultural',
+      level: culturalLevel,
+      icon: '🏛️',
+      color: 'text-purple-500',
+    },
+  ].filter(vibe => vibe.level > 0); // Only show vibes with a level set
 
-  const renderLevel = (level: number, icon: string, category: string) => {
-    const getColor = () => {
-      if (category === 'Adventure') return 'text-orange-500';
-      if (category === 'Nature') return 'text-green-500';
-      return 'text-yellow-500';
-    };
+  if (vibes.length === 0) {
+    return null; // Don't render if no vibes are set
+  }
 
+  const renderLevel = (level: number, icon: string, color: string) => {
     return (
       <div className="flex gap-1 2xl:gap-1.5">
-        {[...Array(5)].map((_, index) => (
+        {[...Array(level)].map((_, index) => (
           <span
             key={index}
-            className={`text-sm sm:text-base 2xl:text-lg ${index < level ? getColor() : 'text-gray-300'}`}
+            className={`text-sm sm:text-base 2xl:text-lg ${color}`}
           >
             {icon}
           </span>
@@ -50,7 +66,7 @@ const TripVibeCheck = () => {
         {vibes.map((vibe) => (
           <div key={vibe.category} className="flex flex-col">
             <span className="text-sm sm:text-base lg:text-lg 2xl:text-xl text-[#000000B2] mb-1 2xl:mb-2">{vibe.category}</span>
-            {renderLevel(vibe.level, vibe.icon, vibe.category)}
+            {renderLevel(vibe.level, vibe.icon, vibe.color)}
           </div>
         ))}
       </div>

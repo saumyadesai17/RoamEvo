@@ -7,27 +7,71 @@ const ScrollingMountains = () => {
   const imageRef = useRef<HTMLImageElement>(null);
 
   useEffect(() => {
+    let ticking = false;
+
     const handleScroll = () => {
-      if (!containerRef.current || !imageRef.current) return;
+      if (ticking) return;
 
-      // Find the parent section (WhyChooseUs)
-      const section = containerRef.current.closest('section');
-      if (!section) return;
-      const rect = section.getBoundingClientRect();
-      const windowHeight = window.innerHeight;
+      ticking = true;
+      requestAnimationFrame(() => {
+        if (!containerRef.current || !imageRef.current) {
+          ticking = false;
+          return;
+        }
 
-      // Progress: 0 when section bottom at bottom of viewport, 1 when top at top
-      const totalScroll = rect.height + windowHeight;
-      const scrolled = windowHeight - rect.top;
-      const progress = Math.max(0, Math.min(1, scrolled / totalScroll));
+        // Find the parent section (WhyChooseUs)
+        const section = containerRef.current.closest('section');
+        if (!section) {
+          ticking = false;
+          return;
+        }
+        
+        const rect = section.getBoundingClientRect();
+        const windowHeight = window.innerHeight;
 
-      // Move the image up inside the container: from 40% (hidden) to 0% (fully visible)
-      const translateY = 60 - progress * 50;
-      imageRef.current.style.transform = `translateY(${translateY}%)`;
+        // Calculate when section is in viewport
+        const sectionTop = rect.top;
+        const sectionBottom = rect.bottom;
+        
+        // Section is completely above viewport - keep at final position
+        if (sectionBottom <= 0) {
+          imageRef.current.style.transform = 'translateY(15%)';
+          ticking = false;
+          return;
+        }
+
+        // Section is completely below viewport - keep at starting position
+        if (sectionTop >= windowHeight) {
+          imageRef.current.style.transform = 'translateY(70%)';
+          ticking = false;
+          return;
+        }
+
+        // Section is in viewport - calculate smooth progress
+        // Progress from 0 (section entering from bottom) to 1 (section leaving from top)
+        const viewportRange = windowHeight + rect.height;
+        const scrollProgress = (windowHeight - sectionTop) / viewportRange;
+        const progress = Math.max(0, Math.min(1, scrollProgress));
+
+        // Smoother easing function for natural movement
+        const easeOutQuad = (t: number) => t * (2 - t);
+        const easedProgress = easeOutQuad(progress);
+
+        // Move mountains from 70% (starting - more hidden) to 15% (final - more visible)
+        const startPosition = 70;
+        const endPosition = 15;
+        const translateY = startPosition - easedProgress * (startPosition - endPosition);
+        imageRef.current.style.transform = `translateY(${translateY}%)`;
+        
+        ticking = false;
+      });
     };
 
-    window.addEventListener('scroll', handleScroll);
-    window.addEventListener('resize', handleScroll);
+    // Use passive listener for better performance
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('resize', handleScroll, { passive: true });
+    
+    // Initial call
     handleScroll();
 
     return () => {
@@ -46,10 +90,15 @@ const ScrollingMountains = () => {
         alt='Himalaya Mountains'
         draggable={false}
         className={
-          "absolute left-0 bottom-0 w-full h-auto object-cover transition-transform duration-300 ease-out will-change-transform " +
+          "absolute left-0 bottom-0 w-full h-auto object-cover will-change-transform " +
           (props.className || "")
         }
-        style={{ minHeight: '100%', maxHeight: 'none', ...(props.style || {}) }}
+        style={{ 
+          minHeight: '100%', 
+          maxHeight: 'none', 
+          transition: 'none', // Remove transition for smoother scroll-driven animation
+          ...(props.style || {}) 
+        }}
       />
     )
   );
@@ -58,8 +107,8 @@ const ScrollingMountains = () => {
   return (
     <div
       ref={containerRef}
-      className="absolute left-0 bottom-0 w-full overflow-hidden"
-      style={{ height: '400px', zIndex: 2, pointerEvents: 'none', userSelect: 'none' }}
+      className="absolute left-0 bottom-0 w-full overflow-hidden h-[250px] sm:h-[300px] md:h-[350px] lg:h-[400px]"
+      style={{ zIndex: 2, pointerEvents: 'none', userSelect: 'none' }}
     >
       <CustomImage
         ref={imageRef}
@@ -70,7 +119,7 @@ const ScrollingMountains = () => {
       />
       {/* Gradient overlay for blending with next section */}
       <div
-        className="absolute left-0 bottom-0 w-full h-16 md:h-24"
+        className="absolute left-0 bottom-0 w-full h-12 sm:h-16 md:h-20"
         style={{
           background: 'linear-gradient(to bottom, rgba(255,255,255,0) 0%, #fff 100%)',
           zIndex: 3,

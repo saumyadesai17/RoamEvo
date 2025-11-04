@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import AdminAccess from "./AdminAccess";
 
 export default function Footer() {
   return (
@@ -203,6 +204,7 @@ export default function Footer() {
                 <p className="text-gray-600 mt-8 md:mt-0">
                   © Roamevo, All rights reserved.
                 </p>
+                <AdminAccess />
               </div>
             </div>
           </div>

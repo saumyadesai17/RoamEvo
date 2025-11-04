@@ -1,0 +1,31 @@
+/* Admin Panel Contrast Improvements */
+
+/* Ensure all labels have dark text */
+.admin-form label {
+  color: #111827 !important; /* text-gray-900 */
+  font-weight: 600 !important;
+}
+
+/* Ensure all inputs have dark text and white backgrounds */
+.admin-form input[type="text"],
+.admin-form input[type="number"],
+.admin-form input[type="email"],
+.admin-form input[type="password"],
+.admin-form input[type="url"],
+.admin-form select,
+.admin-form textarea {
+  background-color: #ffffff !important;
+  color: #111827 !important; /* text-gray-900 */
+}
+
+/* Ensure placeholder text has good contrast */
+.admin-form input::placeholder,
+.admin-form textarea::placeholder {
+  color: #6b7280 !important; /* text-gray-500 */
+}
+
+/* Dropdown options */
+.admin-form select option {
+  background-color: #ffffff !important;
+  color: #111827 !important;
+}

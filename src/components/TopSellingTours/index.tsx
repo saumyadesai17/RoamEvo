@@ -1,7 +1,9 @@
 'use client';
+import { useEffect, useState, Fragment } from 'react';
 import Image from 'next/image';
 import { FaStar } from 'react-icons/fa';
 import { IoLocationSharp } from 'react-icons/io5';
+import { supabase } from '@/lib/supabase';
 
 interface TourCardProps {
   destination: string;
@@ -32,31 +34,64 @@ const TourCard = ({ destination, rating, reviews, title, imageSrc, price, itiner
             <span className="font-medium text-[#1d2952]">{destination}</span>
           </div>
           <div className="flex items-center space-x-1">
-            <FaStar className="text-yellow-400" />
-            <span>{rating}</span>
+            <FaStar className="text-[#C2FD02B2]" />
+            <span className="text-[#000000B2]">{rating}</span>
             <span className="text-gray-500 text-sm">({reviews})</span>
           </div>
         </div>
 
         <h3 className="text-xl text-[#1d2952] font-medium">{title}</h3>
 
-        {/* Itinerary Points */}
-        <div className="flex items-center space-x-1 py-2">
-          {itinerary.map((stop, index) => (
-            <div key={index} className="flex items-center">
-              {index > 0 && <div className="h-[1px] w-5 bg-gray-400"></div>}
-              <div className={`h-3 w-3 rounded-full ${stop.isStart || stop.isEnd ? 'bg-[#1d2952]' : 'border border-[#1d2952] bg-white'}`}></div>
-            </div>
-          ))}
-        </div>
+        {/* Itinerary Points with City Names */}
+        <div className="py-4">
+          {/* City names above (even indices: 0, 2, 4) */}
+          <div className="flex items-center mb-1 min-h-[20px]">
+            {itinerary.map((stop, index) => (
+              <Fragment key={`top-${index}`}>
+                <div className="flex-shrink-0 flex justify-center" style={{ width: '50px' }}>
+                  <div className="text-[12px] text-gray-600 leading-tight text-center">
+                    {index % 2 === 0 && stop.city && !/\d+D\s*\//.test(stop.city) ? stop.city : ''}
+                  </div>
+                </div>
+                {index < itinerary.length - 1 && <div className="flex-1"></div>}
+              </Fragment>
+            ))}
+          </div>
 
-        {/* City Names */}
-        <div className="flex justify-between text-sm text-gray-600">
-          {itinerary.filter(stop => stop.isStart || stop.isEnd).map((stop, index) => (
-            <div key={index}>
-              {stop.city}
+          {/* Dots with connecting lines */}
+          <div className="flex items-center">
+            {itinerary.map((stop, index) => (
+              <Fragment key={index}>
+                <div className="flex-shrink-0 flex justify-center" style={{ width: '50px' }}>
+                  <div className="h-2.5 w-2.5 rounded-full bg-[#1d2952]"></div>
+                </div>
+                {index < itinerary.length - 1 && (
+                  <div className="flex-1 h-[1px] bg-gray-400"></div>
+                )}
+              </Fragment>
+            ))}
+          </div>
+
+          {/* City names below (odd indices: 1, 3) */}
+          <div className="flex items-center mt-1 min-h-[20px]">
+            {itinerary.map((stop, index) => (
+              <Fragment key={`bottom-${index}`}>
+                <div className="flex-shrink-0 flex justify-center" style={{ width: '50px' }}>
+                  <div className="text-[12px] text-gray-600 leading-tight text-center">
+                    {index % 2 !== 0 && stop.city && !/\d+D\s*\//.test(stop.city) ? stop.city : ''}
+                  </div>
+                </div>
+                {index < itinerary.length - 1 && <div className="flex-1"></div>}
+              </Fragment>
+            ))}
+          </div>
+
+          {/* Duration display for tours without city names */}
+          {itinerary.length > 0 && itinerary[0].city && /\d+D\s*\//.test(itinerary[0].city) && (
+            <div className="text-sm text-gray-600 text-center mt-2">
+              {itinerary[0].city}
             </div>
-          ))}
+          )}
         </div>
 
         <div className="flex justify-between items-center pt-4">
@@ -78,47 +113,141 @@ const TourCard = ({ destination, rating, reviews, title, imageSrc, price, itiner
 };
 
 const TopSellingTours = () => {
-  const tours = [
-    {
-      destination: 'Rajasthan',
-      rating: 4.6,
-      reviews: '1.2k',
-      title: 'Royal Rajasthan Escape',
-      imageSrc: '/tours/rajasthan.png',
-      price: '18,499',
-      itinerary: [
-        { city: 'Jaipur' },
-        { city: 'Jodhpur' },
-        { city: 'Udaipur' }
-      ]
-    },
-    {
-      destination: 'Himachal Pradesh',
-      rating: 4.2,
-      reviews: '840k',
-      title: 'Himalayan Adventure Retreat',
-      imageSrc: '/tours/adventure.png',
-      price: '14,999',
-      itinerary: [
-        { city: 'Manali' },
-        { city: 'Kasol' }
-      ]
-    },
-    {
-      destination: 'Delhi, Agra ... 3+',
-      rating: 4.9,
-      reviews: '3.2k',
-      title: 'Grand North India Explorer',
-      imageSrc: '/tours/rajasthan.png',
-      price: '29,999',
-      itinerary: [
-        { city: 'Delhi' },
-        { city: 'Agra' },
-        { city: 'Jaipur' },
-        { city: 'Jodhpur' }
-      ]
-    }
-  ];
+  const [tours, setTours] = useState<TourCardProps[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchTours = async () => {
+      try {
+        // Fetch bestseller tours with itinerary
+        const { data: dbTours } = await supabase
+          .from('tours')
+          .select(`
+            id, 
+            title, 
+            slug, 
+            base_price, 
+            cover_image, 
+            rating_average, 
+            reviews_count, 
+            duration_days, 
+            duration_nights, 
+            metadata, 
+            destination:destinations(name)
+          `)
+          .eq('status', 'published')
+          .eq('is_bestseller', true)
+          .order('bookings_count', { ascending: false })
+          .limit(3);
+
+        // Fallback to featured tours if no bestsellers
+        let displayTours = dbTours && dbTours.length > 0 ? dbTours : null;
+        
+        if (!displayTours) {
+          const fallback = await supabase
+            .from('tours')
+            .select(`
+              id, 
+              title, 
+              slug, 
+              base_price, 
+              cover_image, 
+              rating_average, 
+              reviews_count, 
+              duration_days, 
+              duration_nights, 
+              metadata, 
+              destination:destinations(name)
+            `)
+            .eq('status', 'published')
+            .eq('is_featured', true)
+            .order('created_at', { ascending: false })
+            .limit(3);
+          displayTours = fallback.data;
+        }
+
+        if (displayTours && displayTours.length > 0) {
+          const formattedTours = displayTours.map((tour: {
+            id: number;
+            title: string;
+            slug: string;
+            base_price: number;
+            cover_image: string | null;
+            rating_average: number;
+            reviews_count: number;
+            duration_days: number;
+            duration_nights: number;
+            metadata: {
+              breadcrumbs?: string[];
+              destination_name?: string;
+            } | null;
+            destination: { name: string }[] | { name: string } | null;
+          }) => {
+            const destinationName = Array.isArray(tour.destination) && tour.destination.length > 0
+              ? tour.destination[0].name
+              : tour.destination && 'name' in tour.destination
+              ? tour.destination.name
+              : tour.metadata?.destination_name || tour.title.split(' ')[0];
+
+            // Build breadcrumb itinerary from metadata.breadcrumbs
+            let breadcrumbs: { city: string; isStart?: boolean; isEnd?: boolean }[] = [];
+            
+            // Check if breadcrumbs exist in metadata
+            if (tour.metadata && tour.metadata.breadcrumbs && Array.isArray(tour.metadata.breadcrumbs) && tour.metadata.breadcrumbs.length > 0) {
+              // Use all breadcrumbs from metadata
+              const cities = tour.metadata.breadcrumbs;
+              console.log('Tour:', tour.title, 'Breadcrumbs:', cities, 'Length:', cities.length); // Debug log
+              breadcrumbs = cities.map((city: string, idx: number) => ({
+                city: city,
+                isStart: idx === 0,
+                isEnd: idx === cities.length - 1
+              }));
+              console.log('Formatted breadcrumbs:', breadcrumbs); // Debug log
+            } else {
+              // Fallback to duration display if no breadcrumbs
+              breadcrumbs = [
+                { city: `${tour.duration_days}D / ${tour.duration_nights}N`, isStart: true },
+                { city: '' },
+                { city: '', isEnd: true }
+              ];
+            }
+
+            return {
+              destination: destinationName,
+              rating: tour.rating_average > 0 ? Number(tour.rating_average.toFixed(1)) : 4.5,
+              reviews: tour.reviews_count > 0 ? tour.reviews_count.toString() : '0',
+              title: tour.title,
+              imageSrc: tour.cover_image || '/tours/adventure.png',
+              price: tour.base_price.toLocaleString('en-IN'),
+              itinerary: breadcrumbs
+            };
+          });
+          
+          setTours(formattedTours);
+        }
+      } catch (error) {
+        console.error('Error fetching tours:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTours();
+  }, []);
+
+  if (loading) {
+    return (
+      <section className="py-20 px-6 bg-[#f9f9f5]">
+        <div className="max-w-7xl mx-auto text-center">
+          <p className="text-gray-500">Loading tours...</p>
+        </div>
+      </section>
+    );
+  }
+
+  if (tours.length === 0) {
+    return null; // Don't show section if no tours
+  }
 
   return (
     <section className="py-20 px-6 bg-[#f9f9f5]">
