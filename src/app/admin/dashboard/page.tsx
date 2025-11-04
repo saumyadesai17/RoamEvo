@@ -105,9 +105,10 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Link
             href="/admin/dashboard/tours/create"
-            className="p-6 bg-[#4A5B2D] text-white rounded-lg hover:bg-[#3d4a24] transition-colors border border-[#4A5B2D]"
+            className="flex items-center gap-3 p-6 bg-[#4A5B2D] text-white rounded-lg hover:bg-[#3d4a24] transition-colors border border-[#4A5B2D]"
           >
-            <span className="text-lg">+ Create New Tour</span>
+            <span className="text-3xl font-light">+</span>
+            <span className="text-lg">Create New Tour</span>
           </Link>
           <Link
             href="/admin/dashboard/tours"

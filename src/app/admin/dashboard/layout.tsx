@@ -165,23 +165,6 @@ export default function DashboardLayout({
 
       {/* Main Content */}
       <div className="lg:pl-64">
-        {/* Top Bar */}
-        <header className="h-16 flex items-center justify-between px-4 sm:px-6 lg:px-8 border-b border-[#0000001A] bg-white sticky top-0 z-30">
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="lg:hidden text-[#000000CC]"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          </button>
-          <h1 className="text-lg font-light text-[#000000] font-(family-name:--font-montserrat)">
-            {navigation.find(item => pathname === item.href || (item.href !== '/admin/dashboard' && pathname?.startsWith(item.href)))?.name || 'Dashboard'}
-          </h1>
-          <div className="hidden sm:block text-sm text-[#00000066]">
-            Welcome back
-          </div>
-        </header>
 
         {/* Page Content */}
         <main className="p-4 sm:p-6 lg:p-8">
