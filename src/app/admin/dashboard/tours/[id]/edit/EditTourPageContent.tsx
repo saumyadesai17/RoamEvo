@@ -2,13 +2,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import ImageUpload from '@/components/admin/ImageUpload';
-import ImageGalleryUpload from '@/components/admin/ImageGalleryUpload';
-import PDFUpload from '@/components/admin/PDFUpload';
-import RichTextEditor from '@/components/admin/RichTextEditor';
-import ItineraryBuilder from '@/components/admin/ItineraryBuilder';
-import EssentialsManager from '@/components/admin/EssentialsManager';
-import InclusionsManager from '@/components/admin/InclusionsManager';
+import ImageUpload from '@/components/Admin/ImageUpload';
+import ImageGalleryUpload from '@/components/Admin/ImageGalleryUpload';
+import PDFUpload from '@/components/Admin/PDFUpload';
+import RichTextEditor from '@/components/Admin/RichTextEditor';
+import ItineraryBuilder from '@/components/Admin/ItineraryBuilder';
+import EssentialsManager from '@/components/Admin/EssentialsManager';
+import InclusionsManager from '@/components/Admin/InclusionsManager';
 
 interface ItineraryDay {
   day_number: number;

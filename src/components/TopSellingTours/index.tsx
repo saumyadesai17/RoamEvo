@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState, Fragment } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { FaStar } from 'react-icons/fa';
 import { IoLocationSharp } from 'react-icons/io5';
 import { supabase } from '@/lib/supabase';
@@ -12,20 +13,21 @@ interface TourCardProps {
   title: string;
   imageSrc: string;
   price: string;
+  slug: string;
   itinerary: { city: string; isStart?: boolean; isEnd?: boolean }[];
 }
 
-const TourCard = ({ destination, rating, reviews, title, imageSrc, price, itinerary }: TourCardProps) => {
+const TourCard = ({ destination, rating, reviews, title, imageSrc, price, slug, itinerary }: TourCardProps) => {
   return (
     <div className="flex flex-col rounded-lg overflow-hidden">
-      <div className="relative h-52 w-full overflow-hidden">
+      <Link href={`/tours/${slug}`} className="relative h-52 w-full overflow-hidden cursor-pointer group">
         <Image
           src={imageSrc}
           alt={title}
           fill
-          className="rounded-lg object-cover"
+          className="rounded-lg object-cover group-hover:scale-105 transition-transform duration-300"
         />
-      </div>
+      </Link>
 
       <div className="mt-4 space-y-3">
         <div className="flex items-center justify-between">
@@ -40,7 +42,11 @@ const TourCard = ({ destination, rating, reviews, title, imageSrc, price, itiner
           </div>
         </div>
 
-        <h3 className="text-xl text-[#1d2952] font-medium">{title}</h3>
+        <Link href={`/tours/${slug}`}>
+          <h3 className="text-xl text-[#1d2952] font-medium hover:text-[#4A5B2D] transition-colors cursor-pointer">
+            {title}
+          </h3>
+        </Link>
 
         {/* Itinerary Points with City Names */}
         <div className="py-4">
@@ -217,6 +223,7 @@ const TopSellingTours = () => {
               rating: tour.rating_average > 0 ? Number(tour.rating_average.toFixed(1)) : 4.5,
               reviews: tour.reviews_count > 0 ? tour.reviews_count.toString() : '0',
               title: tour.title,
+              slug: tour.slug,
               imageSrc: tour.cover_image || '/tours/adventure.png',
               price: tour.base_price.toLocaleString('en-IN'),
               itinerary: breadcrumbs
@@ -271,6 +278,7 @@ const TopSellingTours = () => {
               rating={tour.rating}
               reviews={tour.reviews}
               title={tour.title}
+              slug={tour.slug}
               imageSrc={tour.imageSrc}
               price={tour.price}
               itinerary={tour.itinerary}
