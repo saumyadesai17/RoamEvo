@@ -44,23 +44,44 @@ const TourCardComponent = ({ destination, rating, reviews, title, imageSrc, pric
         {/* Tour Title */}
         <h3 className="text-xl text-[#1d2952] font-medium">{title}</h3>
         
-        {/* Itinerary Path - Styled Like the Image */}
-        <div className="flex items-center justify-between py-6 mt-2">
-          {itinerary.map((stop, index) => (
-            <div key={index} className="flex items-center">
-              {/* Connect with line if not first item */}
-              {index > 0 && (
-                <div className="h-[2px] w-full bg-[#0000aa] absolute -z-10"></div>
-              )}
+        {/* Itinerary Path - With Curved Lines */}
+        <div className="relative py-6 mt-2">
+          <svg 
+            className="absolute top-1/2 left-0 w-full h-12 -translate-y-1/2" 
+            style={{ zIndex: 0 }}
+            viewBox="0 0 100 100"
+            preserveAspectRatio="none"
+          >
+            {itinerary.map((_, index) => {
+              if (index === itinerary.length - 1) return null;
               
-              {/* City node */}
-              <div className="flex flex-col items-center relative">
-                <div className="w-10 h-10 bg-[#1d2952] rounded-full flex items-center justify-center text-white text-xs z-10">
+              const startX = (index / (itinerary.length - 1)) * 100;
+              const endX = ((index + 1) / (itinerary.length - 1)) * 100;
+              const midX = (startX + endX) / 2;
+              const controlY = index % 2 === 0 ? 20 : 80; // Alternate curve direction
+              
+              return (
+                <path
+                  key={index}
+                  d={`M ${startX} 50 Q ${midX} ${controlY} ${endX} 50`}
+                  stroke="#0000aa"
+                  strokeWidth="2"
+                  fill="none"
+                  vectorEffect="non-scaling-stroke"
+                />
+              );
+            })}
+          </svg>
+          
+          <div className="relative flex items-center justify-between" style={{ zIndex: 1 }}>
+            {itinerary.map((stop, index) => (
+              <div key={index} className="flex flex-col items-center">
+                <div className="w-10 h-10 bg-[#1d2952] rounded-full flex items-center justify-center text-white text-xs">
                   {stop.city.substring(0, 2)}
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
         
         {/* Cities */}

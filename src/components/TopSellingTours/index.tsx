@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, Fragment } from 'react';
+import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { FaStar } from 'react-icons/fa';
@@ -49,52 +49,68 @@ const TourCard = ({ destination, rating, reviews, title, imageSrc, price, slug, 
         </Link>
 
         {/* Itinerary Points with City Names */}
-        <div className="py-4">
-          {/* City names above (even indices: 0, 2, 4) */}
-          <div className="flex items-center mb-1 min-h-[20px]">
-            {itinerary.map((stop, index) => (
-              <Fragment key={`top-${index}`}>
-                <div className="flex-shrink-0 flex justify-center" style={{ width: '50px' }}>
-                  <div className="text-[12px] text-gray-600 leading-tight text-center">
-                    {index % 2 === 0 && stop.city && !/\d+D\s*\//.test(stop.city) ? stop.city : ''}
-                  </div>
-                </div>
-                {index < itinerary.length - 1 && <div className="flex-1"></div>}
-              </Fragment>
-            ))}
-          </div>
+        <div className="py-4 relative">
+          {/* Dots with curved connecting lines */}
+          <div className="relative h-12">
+            {/* SVG for curved lines */}
+            <svg 
+              className="absolute inset-0 w-full h-full px-[25px]" 
+              style={{ zIndex: 0 }}
+              viewBox="0 0 1000 100"
+              preserveAspectRatio="none"
+            >
+              {itinerary.map((_, index) => {
+                if (index === itinerary.length - 1) return null;
+                
+                const startX = (index / (itinerary.length - 1)) * 1000;
+                const endX = ((index + 1) / (itinerary.length - 1)) * 1000;
+                const midX = (startX + endX) / 2;
+                const controlY = index % 2 === 0 ? 10 : 90; // Increased curve depth
+                
+                return (
+                  <path
+                    key={`curve-${index}`}
+                    d={`M ${startX} 50 Q ${midX} ${controlY}, ${endX} 50`}
+                    stroke="#9ca3af"
+                    strokeWidth="2"
+                    fill="none"
+                  />
+                );
+              })}
+            </svg>
 
-          {/* Dots with connecting lines */}
-          <div className="flex items-center">
-            {itinerary.map((stop, index) => (
-              <Fragment key={index}>
-                <div className="flex-shrink-0 flex justify-center" style={{ width: '50px' }}>
+            {/* Dots with city names positioned relative to each dot */}
+            <div className="absolute inset-0 flex items-center justify-between px-[25px]" style={{ zIndex: 1 }}>
+              {itinerary.map((stop, index) => (
+                <div key={index} className="flex-shrink-0 relative">
+                  {/* City name above (even indices: 0, 2, 4) */}
+                  {index % 2 === 0 && stop.city && !/\d+D\s*\//.test(stop.city) && (
+                    <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 whitespace-nowrap">
+                      <div className="text-[10px] text-gray-600 leading-tight text-center">
+                        {stop.city}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* The dot */}
                   <div className="h-2.5 w-2.5 rounded-full bg-[#1d2952]"></div>
+                  
+                  {/* City name below (odd indices: 1, 3) */}
+                  {index % 2 !== 0 && stop.city && !/\d+D\s*\//.test(stop.city) && (
+                    <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 whitespace-nowrap">
+                      <div className="text-[10px] text-gray-600 leading-tight text-center">
+                        {stop.city}
+                      </div>
+                    </div>
+                  )}
                 </div>
-                {index < itinerary.length - 1 && (
-                  <div className="flex-1 h-[1px] bg-gray-400"></div>
-                )}
-              </Fragment>
-            ))}
-          </div>
-
-          {/* City names below (odd indices: 1, 3) */}
-          <div className="flex items-center mt-1 min-h-[20px]">
-            {itinerary.map((stop, index) => (
-              <Fragment key={`bottom-${index}`}>
-                <div className="flex-shrink-0 flex justify-center" style={{ width: '50px' }}>
-                  <div className="text-[12px] text-gray-600 leading-tight text-center">
-                    {index % 2 !== 0 && stop.city && !/\d+D\s*\//.test(stop.city) ? stop.city : ''}
-                  </div>
-                </div>
-                {index < itinerary.length - 1 && <div className="flex-1"></div>}
-              </Fragment>
-            ))}
+              ))}
+            </div>
           </div>
 
           {/* Duration display for tours without city names */}
           {itinerary.length > 0 && itinerary[0].city && /\d+D\s*\//.test(itinerary[0].city) && (
-            <div className="text-sm text-gray-600 text-center mt-2">
+            <div className="text-sm text-gray-600 text-center mt-4">
               {itinerary[0].city}
             </div>
           )}
