@@ -156,7 +156,7 @@ export default function DashboardLayout({
           </div>
           <button
             onClick={handleLogout}
-            className="w-full px-4 py-2 text-sm text-[#000000CC] hover:bg-[#00000008] rounded-md transition-colors text-left"
+            className="w-full px-4 py-2 text-sm text-[#e7000b] hover:bg-[#00000008] rounded-md transition-colors text-left"
           >
             Sign Out
           </button>
