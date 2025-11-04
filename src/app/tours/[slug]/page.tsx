@@ -1,142 +1,159 @@
-import { Metadata } from 'next';
-import { notFound } from 'next/navigation';
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useParams, notFound } from 'next/navigation';
+import { Tour } from '@/types/tour';
 import Breadcrumb from '@/components/Tours/Breadcrumb';
 import TourHeader from '@/components/Tours/TourHeader';
 import TourGallery from '@/components/Tours/TourGallery';
 import TourTabs from '@/components/Tours/TourTabs';
 import TourContent from '@/components/Tours/TourContent';
 import TourPricing from '@/components/Tours/TourPricing';
+import TourDates from '@/components/Tours/TourDates';
 import TripVibeCheck from '@/components/Tours/TripVibeCheck';
 import ThingsToCarry from '@/components/Tours/ThingsToCarry';
 import DownloadButton from '@/components/Tours/DownloadButton';
 import LiveTripSection from '@/components/Tours/LiveTripSection';
 import StructuredData from '@/components/StructuredData';
-import { supabase } from '@/lib/supabase';
+import {
+  TourHeaderSkeleton,
+  TourGallerySkeleton,
+  TourContentSkeleton,
+  TourPricingSkeleton,
+  TourDatesSkeleton,
+  TripVibeCheckSkeleton,
+  ThingsToCarrySkeleton,
+} from '@/components/Tours/TourSkeleton';
 
-// Revalidate every 60 seconds
-export const revalidate = 60;
+export default function TourPage() {
+  const params = useParams();
+  const slug = params?.slug as string;
+  const [tour, setTour] = useState<Tour | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [notFoundState, setNotFoundState] = useState(false);
 
-// Generate static params for known tours
-export async function generateStaticParams() {
-  const { data: tours } = await supabase
-    .from('tours')
-    .select('slug')
-    .eq('status', 'published');
+  useEffect(() => {
+    const fetchTour = async () => {
+      if (!slug) return;
 
-  if (!tours) return [];
+      try {
+        console.log('[Client] Fetching tour data for slug:', slug);
+        
+        // Fetch tour data from API route
+        const response = await fetch(`/api/tours/${slug}`);
+        const data = await response.json();
 
-  return tours.map((tour) => ({
-    slug: tour.slug,
-  }));
-}
+        if (!response.ok) {
+          console.error('[Client] API error:', data.error, data.details);
+          setNotFoundState(true);
+          return;
+        }
 
-// Generate metadata dynamically
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}): Promise<Metadata> {
-  const { slug } = await params;
+        if (!data.tour) {
+          console.log('[Client] No tour data returned');
+          setNotFoundState(true);
+          return;
+        }
 
-  const { data: tour } = await supabase
-    .from('tours')
-    .select('*')
-    .eq('slug', slug)
-    .eq('status', 'published')
-    .single();
+        console.log('[Client] Tour data received:', {
+          title: data.tour.title,
+          slug: data.tour.slug,
+          itineraryCount: data.tour.itinerary?.length || 0,
+          datesCount: data.tour.filteredDates?.length || 0,
+        });
 
-  if (!tour) {
-    return {
-      title: 'Tour Not Found | Roamevo',
-      description: 'The requested tour could not be found.',
+        setTour(data.tour);
+
+        // Increment view count only once per device (with 24-hour expiry for more accurate analytics)
+        const viewKey = `tour_viewed_${slug}`;
+        const hasViewed = localStorage.getItem(viewKey);
+        const now = Date.now();
+        const oneDayMs = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+        
+        let shouldIncrementView = false;
+        
+        if (!hasViewed) {
+          // First time viewing this tour
+          shouldIncrementView = true;
+        } else {
+          // Check if view is older than 24 hours
+          const lastViewTime = parseInt(hasViewed);
+          if (now - lastViewTime > oneDayMs) {
+            shouldIncrementView = true;
+            console.log('[Client] Previous view expired (>24h), counting as new view');
+          } else {
+            console.log('[Client] Tour already viewed on this device at:', new Date(lastViewTime));
+          }
+        }
+        
+        if (shouldIncrementView) {
+          // Mark as viewed in localStorage with current timestamp
+          localStorage.setItem(viewKey, now.toString());
+          
+          // Increment view count on server
+          fetch(`/api/tours/${slug}`, { method: 'POST' })
+            .then(() => console.log('[Client] View count incremented'))
+            .catch(err => console.error('[Client] Failed to increment view count:', err));
+        }
+      } catch (error) {
+        console.error('[Client] Exception fetching tour:', error);
+        setNotFoundState(true);
+      } finally {
+        setLoading(false);
+      }
     };
-  }
 
-  return {
-    title: tour.seo_title || tour.title,
-    description: tour.seo_description || tour.overview.substring(0, 160),
-    keywords: tour.seo_keywords || [],
-    openGraph: {
-      title: tour.seo_title || tour.title,
-      description: tour.seo_description || tour.overview.substring(0, 160),
-      url: `https://roamevo.in/tours/${slug}`,
-      images: tour.cover_image
-        ? [
-            {
-              url: tour.cover_image,
-              width: 1200,
-              height: 630,
-              alt: tour.title,
-            },
-          ]
-        : [],
-    },
-    alternates: {
-      canonical: `https://roamevo.in/tours/${slug}`,
-    },
-  };
-}
+    fetchTour();
+  }, [slug]);
 
-export default async function TourPage({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
-  const { slug } = await params;
-
-  // Fetch tour data with relations
-  const { data: tour, error } = await supabase
-    .from('tours')
-    .select(
-      `
-      *,
-      destination:destinations(*),
-      itinerary:tour_itinerary(*),
-      essentials:tour_essentials(*),
-      inclusions:tour_inclusions(*)
-    `
-    )
-    .eq('slug', slug)
-    .eq('status', 'published')
-    .single();
-
-  if (error || !tour) {
+  if (notFoundState) {
     notFound();
   }
 
-  // Sort itinerary by day number
-  const sortedItinerary = tour.itinerary?.sort(
-    (a: { day_number: number }, b: { day_number: number }) =>
-      a.day_number - b.day_number
-  ) || [];
+  if (loading) {
+    return (
+      <div className="bg-white">
+        <div className="pb-6 sm:pb-8 lg:pb-12 2xl:pb-16 container mx-auto px-3 sm:px-4 lg:px-6 2xl:px-8 max-w-7xl 2xl:max-w-[1600px]">
+          <div className="h-6 bg-gray-200 rounded w-64 mb-6 animate-pulse"></div>
+          
+          <TourHeaderSkeleton />
+          <TourGallerySkeleton />
+
+          <div className="mt-6 sm:mt-8 lg:mt-12 2xl:mt-16">
+            <div className="grid grid-cols-1 lg:grid-cols-[2fr_1px_1fr] 2xl:grid-cols-[2.5fr_1px_1fr] gap-6 sm:gap-8 lg:gap-12 2xl:gap-16">
+              <div className="lg:pr-6 2xl:pr-8">
+                <TourContentSkeleton />
+              </div>
+
+              <div className="hidden lg:block w-px bg-gray-200"></div>
+
+              <div className="lg:pl-6 2xl:pl-8 lg:pt-3 2xl:pt-4">
+                <div className="space-y-3 sm:space-y-4 2xl:space-y-6">
+                  <TourPricingSkeleton />
+                  <TourDatesSkeleton />
+                  <TripVibeCheckSkeleton />
+                  <ThingsToCarrySkeleton />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!tour) return null;
+
+  // Data is already sorted and processed by the API
+  const sortedItinerary = tour.itinerary || [];
+  const tourDates = tour.filteredDates || [];
+  const priceIncludes = tour.processedInclusions || [];
+  const priceExcludes = tour.processedExclusions || [];
 
   // Get things to carry
   const thingsToCarry = tour.essentials?.find(
     (e: { category: string }) => e.category === 'carry'
   );
-
-  // Get inclusions and exclusions - check both sources
-  // Method 1: From tour_inclusions table (detailed with descriptions)
-  const inclusionsFromTable = tour.inclusions
-    ?.filter((inc: { type: string }) => inc.type === 'inclusion')
-    .map((inc: { item: string; description?: string }) => 
-      inc.description ? `${inc.item} - ${inc.description}` : inc.item
-    ) || [];
-  
-  const exclusionsFromTable = tour.inclusions
-    ?.filter((exc: { type: string }) => exc.type === 'exclusion')
-    .map((exc: { item: string; description?: string }) => 
-      exc.description ? `${exc.item} - ${exc.description}` : exc.item
-    ) || [];
-  
-  // Method 2: From tours.price_includes and tours.price_excludes arrays (simple strings)
-  const priceIncludes = inclusionsFromTable.length > 0 
-    ? inclusionsFromTable 
-    : (tour.price_includes || []);
-  
-  const priceExcludes = exclusionsFromTable.length > 0 
-    ? exclusionsFromTable 
-    : (tour.price_excludes || []);
 
   // Prepare breadcrumb items from metadata.breadcrumbs or fallback to destination
   const breadcrumbItems: Array<{ label: string; href: string }> = [];
@@ -196,10 +213,10 @@ export default async function TourPage({
         })(),
       description: `${tour.duration_days}-day ${tour.title} including accommodation, transport, activities, and meals`,
     },
-    itinerary: sortedItinerary.map((day: { title: string; description: string }) => ({
+    itinerary: sortedItinerary.map((day) => ({
       '@type': 'TouristDestination',
       name: day.title,
-      description: day.description,
+      description: day.description || '',
     })),
     duration: `P${tour.duration_days}D`,
   };
@@ -236,14 +253,18 @@ export default async function TourPage({
 
             {/* Sidebar */}
             <div className="lg:pl-6 2xl:pl-8 lg:pt-3 2xl:pt-4">
-              {/* Sticky Sidebar */}
-              <div className="lg:sticky lg:top-19 2xl:top-24 lg:max-h-screen 2xl:max-h-[calc(100vh-6rem)] lg:overflow-y-auto scrollbar-hide space-y-3 sm:space-y-4 2xl:space-y-6">
+              {/* Sticky Sidebar - No height limit or overflow to show all content */}
+              <div className="lg:sticky lg:top-19 2xl:top-24 space-y-3 sm:space-y-4 2xl:space-y-6">
                 <TourPricing 
                   price={tour.base_price} 
                   currency={tour.currency}
                   tourSlug={slug}
                   pdfItinerary={tour.pdf_itinerary}
                 />
+                
+                {/* Tour Dates Section */}
+                <TourDates dates={tourDates} />
+                
                 <TripVibeCheck
                   adventureLevel={tour.adventure_level}
                   spiritualLevel={tour.spiritual_level}

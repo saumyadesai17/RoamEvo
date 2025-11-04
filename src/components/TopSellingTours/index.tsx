@@ -4,7 +4,27 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { FaStar } from 'react-icons/fa';
 import { IoLocationSharp } from 'react-icons/io5';
+import { HiCalendar } from 'react-icons/hi2';
 import { supabase } from '@/lib/supabase';
+import { TourCardSkeleton } from './TourCardSkeleton';
+
+interface TourData {
+  slug: string;
+  destination?: { name: string } | { name: string }[]; // Supabase returns array
+  rating_average: number;
+  reviews_count: number;
+  title: string;
+  cover_image?: string;
+  base_price: number;
+  duration_days: number;
+  duration_nights: number;
+  metadata?: { 
+    destination_name?: string; 
+    breadcrumbs?: string[];
+    [key: string]: unknown;
+  };
+  itinerary?: { city?: string }[];
+}
 
 interface TourCardProps {
   destination: string;
@@ -15,9 +35,20 @@ interface TourCardProps {
   price: string;
   slug: string;
   itinerary: { city: string; isStart?: boolean; isEnd?: boolean }[];
+  nextDepartureDate?: string;
 }
 
-const TourCard = ({ destination, rating, reviews, title, imageSrc, price, slug, itinerary }: TourCardProps) => {
+const TourCard = ({ destination, rating, reviews, title, imageSrc, price, slug, itinerary, nextDepartureDate }: TourCardProps) => {
+  // Format date nicely
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric',
+      year: 'numeric'
+    });
+  };
+
   return (
     <div className="flex flex-col rounded-lg overflow-hidden">
       <Link href={`/tours/${slug}`} className="relative h-52 w-full overflow-hidden cursor-pointer group">
@@ -27,6 +58,17 @@ const TourCard = ({ destination, rating, reviews, title, imageSrc, price, slug, 
           fill
           className="rounded-lg object-cover group-hover:scale-105 transition-transform duration-300"
         />
+        
+        {/* Next Departure Badge - Overlay on Image */}
+        {nextDepartureDate && (
+          <div className="absolute top-3 right-3 bg-white/95 backdrop-blur-sm rounded-lg shadow-lg px-3 py-2 flex items-center gap-2 z-10">
+            <HiCalendar className="text-[#1d2952] text-lg" />
+            <div className="flex flex-col">
+              <span className="text-[9px] text-gray-600 font-medium uppercase tracking-wide">Next Trip</span>
+              <span className="text-xs font-bold text-[#1d2952]">{formatDate(nextDepartureDate)}</span>
+            </div>
+          </div>
+        )}
       </Link>
 
       <div className="mt-4 space-y-3">
@@ -82,7 +124,7 @@ const TourCard = ({ destination, rating, reviews, title, imageSrc, price, slug, 
             {/* Dots with city names positioned relative to each dot */}
             <div className="absolute inset-0 flex items-center justify-between px-[25px]" style={{ zIndex: 1 }}>
               {itinerary.map((stop, index) => (
-                <div key={index} className="flex-shrink-0 relative">
+                <div key={index} className="shrink-0 relative">
                   {/* City name above (even indices: 0, 2, 4) */}
                   {index % 2 === 0 && stop.city && !/\d+D\s*\//.test(stop.city) && (
                     <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 whitespace-nowrap">
@@ -137,6 +179,7 @@ const TourCard = ({ destination, rating, reviews, title, imageSrc, price, slug, 
 const TopSellingTours = () => {
   const [tours, setTours] = useState<TourCardProps[]>([]);
   const [loading, setLoading] = useState(true);
+  const [skeletonCount, setSkeletonCount] = useState(3); // Default to 3
 
   useEffect(() => {
     const fetchTours = async () => {
@@ -189,22 +232,41 @@ const TopSellingTours = () => {
         }
 
         if (displayTours && displayTours.length > 0) {
-          const formattedTours = displayTours.map((tour: {
-            id: number;
-            title: string;
-            slug: string;
-            base_price: number;
-            cover_image: string | null;
-            rating_average: number;
-            reviews_count: number;
-            duration_days: number;
-            duration_nights: number;
-            metadata: {
-              breadcrumbs?: string[];
-              destination_name?: string;
-            } | null;
-            destination: { name: string }[] | { name: string } | null;
-          }) => {
+          // Set skeleton count to match actual tour count
+          setSkeletonCount(displayTours.length);
+          
+          // Fetch next departure date for each tour using slug-based API
+          const toursWithDates = await Promise.all(
+            displayTours.map(async (tour: TourData) => {
+              let nextDate: string | undefined;
+              
+              try {
+                const response = await fetch(`/api/tours/${tour.slug}/dates`);
+                
+                // Check if response is actually JSON
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                  console.error(`Tour ${tour.slug} dates API returned non-JSON response (${response.status})`);
+                  return { tour, nextDate };
+                }
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success && data.dates && data.dates.length > 0) {
+                  nextDate = data.dates[0].start_date;
+                  console.log(`Tour ${tour.slug} has next date:`, nextDate);
+                } else {
+                  console.log(`Tour ${tour.slug} has no upcoming dates`, data);
+                }
+              } catch (error) {
+                console.error(`Error fetching dates for tour ${tour.slug}:`, error);
+              }
+              
+              return { tour, nextDate };
+            })
+          );
+
+          const formattedTours = toursWithDates.map(({ tour, nextDate }) => {
             const destinationName = Array.isArray(tour.destination) && tour.destination.length > 0
               ? tour.destination[0].name
               : tour.destination && 'name' in tour.destination
@@ -218,13 +280,11 @@ const TopSellingTours = () => {
             if (tour.metadata && tour.metadata.breadcrumbs && Array.isArray(tour.metadata.breadcrumbs) && tour.metadata.breadcrumbs.length > 0) {
               // Use all breadcrumbs from metadata
               const cities = tour.metadata.breadcrumbs;
-              console.log('Tour:', tour.title, 'Breadcrumbs:', cities, 'Length:', cities.length); // Debug log
               breadcrumbs = cities.map((city: string, idx: number) => ({
                 city: city,
                 isStart: idx === 0,
                 isEnd: idx === cities.length - 1
               }));
-              console.log('Formatted breadcrumbs:', breadcrumbs); // Debug log
             } else {
               // Fallback to duration display if no breadcrumbs
               breadcrumbs = [
@@ -234,6 +294,8 @@ const TopSellingTours = () => {
               ];
             }
 
+            console.log(`Tour ${tour.slug} (${tour.title}) - Next date:`, nextDate);
+
             return {
               destination: destinationName,
               rating: tour.rating_average > 0 ? Number(tour.rating_average.toFixed(1)) : 4.5,
@@ -242,10 +304,12 @@ const TopSellingTours = () => {
               slug: tour.slug,
               imageSrc: tour.cover_image || '/tours/adventure.png',
               price: tour.base_price.toLocaleString('en-IN'),
-              itinerary: breadcrumbs
+              itinerary: breadcrumbs,
+              nextDepartureDate: nextDate
             };
           });
           
+          console.log('Final formatted tours with dates:', formattedTours.map(t => ({ title: t.title, nextDate: t.nextDepartureDate })));
           setTours(formattedTours);
         }
       } catch (error) {
@@ -261,8 +325,23 @@ const TopSellingTours = () => {
   if (loading) {
     return (
       <section className="py-20 px-6 bg-[#f9f9f5]">
-        <div className="max-w-7xl mx-auto text-center">
-          <p className="text-gray-500">Loading tours...</p>
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col md:flex-row items-center md:items-start justify-between mb-16">
+            <p className="text-gray-500 mb-4 md:mb-0">
+              Experience, Trust, and Adventures Tailored Just for You.
+            </p>
+            <div className="w-full md:w-64 h-px bg-gray-300"></div>
+          </div>
+
+          <h2 className="text-4xl md:text-5xl font-medium text-[#1d2952] mb-12">
+            Our Top Selling Tours
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {[...Array(skeletonCount)].map((_, index) => (
+              <TourCardSkeleton key={index} />
+            ))}
+          </div>
         </div>
       </section>
     );
@@ -298,6 +377,7 @@ const TopSellingTours = () => {
               imageSrc={tour.imageSrc}
               price={tour.price}
               itinerary={tour.itinerary}
+              nextDepartureDate={tour.nextDepartureDate}
             />
           ))}
         </div>

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import RichTextEditor from '@/components/admin/RichTextEditor';
 import ImageGalleryUpload from '@/components/admin/ImageGalleryUpload';
+import ConfirmDialog from './ConfirmDialog';
 
 export interface ItineraryDay {
   day_number: number;
@@ -27,6 +28,8 @@ interface ItineraryBuilderProps {
 
 export default function ItineraryBuilder({ value, onChange, totalDays }: ItineraryBuilderProps) {
   const [expandedDay, setExpandedDay] = useState<number | null>(null);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [dayToRemove, setDayToRemove] = useState<number | null>(null);
 
   // Initialize days if empty
   useEffect(() => {
@@ -109,22 +112,31 @@ export default function ItineraryBuilder({ value, onChange, totalDays }: Itinera
 
   // Remove a specific day and renumber remaining days
   const removeDay = (dayIndex: number) => {
-    if (window.confirm(`Are you sure you want to remove Day ${dayIndex + 1}? This action cannot be undone.`)) {
-      const newDays = value
-        .filter((_, index) => index !== dayIndex)
-        .map((day, index) => ({
-          ...day,
-          day_number: index + 1,
-          title: day.title.startsWith('Day ') ? `Day ${index + 1}` : day.title,
-        }));
-      onChange(newDays);
-      // Close expanded day if it was the one removed
-      if (expandedDay === dayIndex) {
-        setExpandedDay(null);
-      } else if (expandedDay !== null && expandedDay > dayIndex) {
-        setExpandedDay(expandedDay - 1);
-      }
+    setDayToRemove(dayIndex);
+    setShowConfirm(true);
+  };
+
+  const confirmRemoveDay = () => {
+    if (dayToRemove === null) return;
+
+    const newDays = value
+      .filter((_, index) => index !== dayToRemove)
+      .map((day, index) => ({
+        ...day,
+        day_number: index + 1,
+        title: day.title.startsWith('Day ') ? `Day ${index + 1}` : day.title,
+      }));
+    onChange(newDays);
+    
+    // Close expanded day if it was the one removed
+    if (expandedDay === dayToRemove) {
+      setExpandedDay(null);
+    } else if (expandedDay !== null && expandedDay > dayToRemove) {
+      setExpandedDay(expandedDay - 1);
     }
+    
+    setShowConfirm(false);
+    setDayToRemove(null);
   };
 
   return (
@@ -360,6 +372,21 @@ export default function ItineraryBuilder({ value, onChange, totalDays }: Itinera
           <p className="text-sm text-gray-500">Set the tour duration first, then generate the itinerary</p>
         </div>
       )}
+
+      {/* Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showConfirm}
+        onCancel={() => {
+          setShowConfirm(false);
+          setDayToRemove(null);
+        }}
+        onConfirm={confirmRemoveDay}
+        title="Remove Day?"
+        message={`Are you sure you want to remove Day ${(dayToRemove ?? 0) + 1}? This action cannot be undone.`}
+        confirmLabel="Remove"
+        cancelLabel="Cancel"
+        variant="danger"
+      />
     </div>
   );
 }

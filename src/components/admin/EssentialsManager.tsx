@@ -30,10 +30,13 @@ export default function EssentialsManager({ value, onChange }: EssentialsManager
   // Update items for current category
   const updateItems = (items: string[]) => {
     const newEssentials = value.filter((e) => e.category !== activeTab);
-    if (items.some((item) => item.trim())) {
+    
+    // Always add the category if there are items (even if some are empty)
+    // Only filter out completely empty entries when saving
+    if (items.length > 0) {
       newEssentials.push({
         category: activeTab,
-        items: items.filter((item) => item.trim()),
+        items: items, // Keep all items including empty ones for UI
       });
     }
     onChange(newEssentials);
@@ -48,7 +51,11 @@ export default function EssentialsManager({ value, onChange }: EssentialsManager
   // Remove item
   const removeItem = (index: number) => {
     const currentItems = getCurrentItems();
-    updateItems(currentItems.filter((_, i) => i !== index));
+    const filteredItems = currentItems.filter((_, i) => i !== index);
+    
+    // If removing all items, keep one empty item
+    const itemsToUpdate = filteredItems.length === 0 ? [''] : filteredItems;
+    updateItems(itemsToUpdate);
   };
 
   // Update specific item
@@ -92,7 +99,7 @@ export default function EssentialsManager({ value, onChange }: EssentialsManager
         <div className="space-y-3">
           {currentItems.map((item, index) => (
             <div key={index} className="flex gap-2">
-              <div className="flex-shrink-0 w-8 h-10 flex items-center justify-center text-gray-400 font-medium">
+              <div className="shrink-0 w-8 h-10 flex items-center justify-center text-gray-400 font-medium">
                 {index + 1}.
               </div>
               <input
@@ -102,11 +109,12 @@ export default function EssentialsManager({ value, onChange }: EssentialsManager
                 className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A5B2D] focus:border-transparent bg-white text-gray-900"
                 placeholder={`Enter ${categories.find((c) => c.id === activeTab)?.label.toLowerCase()} item...`}
               />
-              {currentItems.length > 1 && (
+              {(currentItems.length > 1 || (currentItems.length === 1 && item.trim())) && (
                 <button
                   type="button"
                   onClick={() => removeItem(index)}
                   className="px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                  title="Remove item"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
@@ -137,7 +145,8 @@ export default function EssentialsManager({ value, onChange }: EssentialsManager
       {/* Summary */}
       <div className="grid grid-cols-3 gap-4">
         {categories.map((cat) => {
-          const count = value.find((e) => e.category === cat.id)?.items.length || 0;
+          const essential = value.find((e) => e.category === cat.id);
+          const count = essential?.items.filter(item => item.trim()).length || 0;
           return (
             <div key={cat.id} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
               <div className="flex items-center gap-2 mb-1">

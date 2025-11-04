@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
+import AlertDialog from '@/components/admin/AlertDialog';
+import ConfirmDialog from '@/components/admin/ConfirmDialog';
 
 interface Tour {
   id: string;
@@ -29,6 +31,12 @@ export default function ToursListPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [alertState, setAlertState] = useState<{ show: boolean; title: string; message: string; variant: 'success' | 'error' | 'warning' | 'info' }>({
+    show: false,
+    title: '',
+    message: '',
+    variant: 'info'
+  });
 
   useEffect(() => {
     fetchTours();
@@ -84,13 +92,23 @@ export default function ToursListPage() {
       if (result.success) {
         setTours(tours.filter(t => t.id !== id));
         setDeleteConfirm(null);
-        alert('Tour deleted successfully');
+        setAlertState({
+          show: true,
+          title: 'Success',
+          message: 'Tour deleted successfully',
+          variant: 'success'
+        });
       } else {
         throw new Error(result.error || 'Failed to delete tour');
       }
     } catch (error) {
       console.error('Failed to delete tour:', error);
-      alert('Failed to delete tour. Please try again.');
+      setAlertState({
+        show: true,
+        title: 'Error',
+        message: 'Failed to delete tour. Please try again.',
+        variant: 'error'
+      });
     }
   };
 
@@ -125,7 +143,7 @@ export default function ToursListPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-light text-[#000000] font-[family-name:var(--font-montserrat)]">
+          <h2 className="text-2xl font-light text-[#000000] font-(family-name:--font-montserrat)">
             Tours
           </h2>
           <p className="text-[#00000099] mt-1">
@@ -148,13 +166,13 @@ export default function ToursListPage() {
             placeholder="Search tours..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full px-4 py-2 border border-[#0000001A] rounded-md focus:outline-none focus:border-[#4A5B2D] transition-colors"
+            className="w-full px-4 py-2 bg-white text-[#000000] placeholder-[#00000066] border border-[#0000001A] rounded-md focus:outline-none focus:border-[#4A5B2D] transition-colors"
           />
         </div>
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="px-4 py-2 border border-[#0000001A] rounded-md focus:outline-none focus:border-[#4A5B2D] transition-colors"
+          className="px-4 py-2 bg-white text-[#000000] border border-[#0000001A] rounded-md focus:outline-none focus:border-[#4A5B2D] transition-colors"
         >
           <option value="all">All Status</option>
           <option value="published">Published</option>
@@ -284,32 +302,25 @@ export default function ToursListPage() {
       </div>
 
       {/* Delete Confirmation Modal */}
-      {deleteConfirm && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <h3 className="text-lg font-medium text-[#000000] mb-2">
-              Delete Tour
-            </h3>
-            <p className="text-[#00000099] mb-6">
-              Are you sure you want to delete this tour? This action cannot be undone.
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setDeleteConfirm(null)}
-                className="flex-1 px-4 py-2 border border-[#0000001A] text-[#000000CC] rounded-md hover:bg-[#00000008] transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => handleDelete(deleteConfirm)}
-                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        isOpen={!!deleteConfirm}
+        onCancel={() => setDeleteConfirm(null)}
+        onConfirm={() => deleteConfirm && handleDelete(deleteConfirm)}
+        title="Delete Tour"
+        message="Are you sure you want to delete this tour? This action cannot be undone."
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        variant="danger"
+      />
+
+      {/* Alert Dialog */}
+      <AlertDialog
+        isOpen={alertState.show}
+        onClose={() => setAlertState({ ...alertState, show: false })}
+        title={alertState.title}
+        message={alertState.message}
+        variant={alertState.variant}
+      />
     </div>
   );
 }

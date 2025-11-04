@@ -55,6 +55,8 @@ export interface Tour {
   cover_image?: string;
   gallery_images: string[];
   video_url?: string;
+  pdf_itinerary?: string;
+  pdf_terms?: string;
   
   // SEO
   seo_title?: string;
@@ -91,6 +93,11 @@ export interface Tour {
   destination?: Destination;
   itinerary?: TourItinerary[];
   essentials?: TourEssential[];
+  
+  // Processed data from API
+  filteredDates?: TourDate[];
+  processedInclusions?: string[];
+  processedExclusions?: string[];
 }
 
 export interface TourItinerary {
@@ -157,6 +164,20 @@ export interface TourInclusion {
   description?: string;
   display_order: number;
   created_at: string;
+}
+
+export interface TourDate {
+  id: string;
+  tour_id: string;
+  start_date: string;
+  end_date: string;
+  available_slots: number;
+  booked_slots: number;
+  price?: number;
+  is_guaranteed: boolean;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 // Props types for components

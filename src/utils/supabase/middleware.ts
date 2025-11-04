@@ -33,18 +33,30 @@ export async function updateSession(request: NextRequest) {
 
   // IMPORTANT: DO NOT REMOVE auth.getUser()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
 
-  // Protect admin dashboard routes
-  if (
-    !user &&
-    request.nextUrl.pathname.startsWith('/admin/dashboard')
-  ) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/admin'
-    return NextResponse.redirect(url)
+    // Protect admin dashboard routes
+    if (
+      !user &&
+      request.nextUrl.pathname.startsWith('/admin/dashboard')
+    ) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/admin'
+      return NextResponse.redirect(url)
+    }
+  } catch (error) {
+    // Handle authentication errors gracefully
+    console.log('Auth error in middleware (this is usually normal):', error);
+    
+    // If we're on an admin route and there's an auth error, redirect to login
+    if (request.nextUrl.pathname.startsWith('/admin/dashboard')) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/admin'
+      return NextResponse.redirect(url)
+    }
   }
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is.

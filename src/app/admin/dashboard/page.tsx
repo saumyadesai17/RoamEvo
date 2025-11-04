@@ -72,7 +72,7 @@ export default function DashboardPage() {
     <div className="space-y-8">
       {/* Welcome Section */}
       <div>
-        <h2 className="text-2xl font-light text-[#000000] font-[family-name:var(--font-montserrat)] mb-2">
+        <h2 className="text-2xl font-light text-[#000000] font-(family-name:--font-montserrat) mb-2">
           Content Management
         </h2>
         <p className="text-[#00000099]">
@@ -90,7 +90,7 @@ export default function DashboardPage() {
             <p className="text-sm text-[#00000099] mb-1">
               {stat.name}
             </p>
-            <p className="text-3xl font-light text-[#000000] font-[family-name:var(--font-montserrat)]">
+            <p className="text-3xl font-light text-[#000000] font-(family-name:--font-montserrat)">
               {stat.value}
             </p>
           </div>
@@ -99,7 +99,7 @@ export default function DashboardPage() {
 
       {/* Quick Actions */}
       <div>
-        <h3 className="text-lg font-light text-[#000000] font-[family-name:var(--font-montserrat)] mb-4">
+        <h3 className="text-lg font-light text-[#000000] font-(family-name:--font-montserrat) mb-4">
           Quick Actions
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

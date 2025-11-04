@@ -8,6 +8,7 @@ import ImageGalleryUpload from '@/components/admin/ImageGalleryUpload';
 import ItineraryBuilder, { type ItineraryDay } from '@/components/admin/ItineraryBuilder';
 import EssentialsManager, { type Essential } from '@/components/admin/EssentialsManager';
 import InclusionsManager, { type Inclusion } from '@/components/admin/InclusionsManager';
+import AlertDialog from '@/components/admin/AlertDialog';
 
 type TourStatus = 'draft' | 'published' | 'archived' | 'sold_out';
 type TourCategory = 'domestic' | 'international' | 'adventure' | 'spiritual' | 'cultural' | 'beach' | 'mountain' | 'desert' | 'wildlife';
@@ -72,6 +73,12 @@ export default function CreateTourPageContent() {
   const [formData, setFormData] = useState(initialFormData);
   const [activeTab, setActiveTab] = useState<'basic' | 'description' | 'pricing' | 'media' | 'itinerary' | 'essentials' | 'inclusions' | 'features'>('basic');
   const [saving, setSaving] = useState(false);
+  const [alertState, setAlertState] = useState<{ show: boolean; title: string; message: string; variant: 'success' | 'error' | 'warning' | 'info' }>({
+    show: false,
+    title: '',
+    message: '',
+    variant: 'info'
+  });
 
   // Auto-generate slug from title
   const handleTitleChange = (title: string) => {
@@ -125,13 +132,24 @@ export default function CreateTourPageContent() {
     
     // Basic validation
     if (!formData.title || !formData.slug || !formData.overview) {
-      alert('Please fill in all required fields (Title, Slug, Overview)');
+      setAlertState({
+        show: true,
+        title: 'Missing Information',
+        message: 'Please fill in all required fields (Title, Slug, Overview)',
+        variant: 'warning'
+      });
       return;
     }
 
     setSaving(true);
 
     try {
+      // Clean up essentials data before sending
+      const cleanedEssentials = formData.essentials.map(essential => ({
+        ...essential,
+        items: essential.items.filter(item => item.trim()) // Remove empty items
+      })).filter(essential => essential.items.length > 0); // Remove categories with no items
+
       const response = await fetch('/api/admin/tours', {
         method: 'POST',
         headers: {
@@ -139,6 +157,7 @@ export default function CreateTourPageContent() {
         },
         body: JSON.stringify({
           ...formData,
+          essentials: cleanedEssentials,
           metadata: {
             breadcrumbs: formData.breadcrumbs.filter(b => b.trim()),
           },
@@ -150,11 +169,24 @@ export default function CreateTourPageContent() {
       }
 
       const data = await response.json();
-      alert('Tour created successfully!');
-      router.push(`/admin/dashboard/tours/${data.tour.id}/edit`);
+      setAlertState({
+        show: true,
+        title: 'Success',
+        message: 'Tour created successfully!',
+        variant: 'success'
+      });
+      // Navigate after a short delay to show success message
+      setTimeout(() => {
+        router.push(`/admin/dashboard/tours/${data.tour.id}/edit`);
+      }, 1500);
     } catch (error) {
       console.error('Error creating tour:', error);
-      alert('Failed to create tour. Please try again.');
+      setAlertState({
+        show: true,
+        title: 'Error',
+        message: 'Failed to create tour. Please try again.',
+        variant: 'error'
+      });
     } finally {
       setSaving(false);
     }
@@ -176,7 +208,7 @@ export default function CreateTourPageContent() {
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-light font-[family-name:var(--font-montserrat)] text-gray-900 mb-2">
+          <h1 className="text-3xl font-light font-(family-name:--font-montserrat) text-gray-900 mb-2">
             Create New Tour
           </h1>
           <p className="text-gray-600">Fill in the details below to create a new tour package</p>
@@ -664,6 +696,24 @@ export default function CreateTourPageContent() {
                       </div>
                     </div>
                   </div>
+
+                  {/* Note about Departure Dates */}
+                  <div className="border-t border-gray-200 pt-6">
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <div className="flex items-start gap-3">
+                        <svg className="w-5 h-5 text-blue-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <div>
+                          <h4 className="text-sm font-medium text-blue-900 mb-1">Departure Dates</h4>
+                          <p className="text-sm text-blue-700">
+                            You can add specific departure dates and manage availability after creating the tour. 
+                            This will allow customers to see available trip dates and book accordingly.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
@@ -699,6 +749,15 @@ export default function CreateTourPageContent() {
           </div>
         </form>
       </div>
+
+      {/* Alert Dialog */}
+      <AlertDialog
+        isOpen={alertState.show}
+        onClose={() => setAlertState({ ...alertState, show: false })}
+        title={alertState.title}
+        message={alertState.message}
+        variant={alertState.variant}
+      />
     </div>
   );
 }

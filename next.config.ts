@@ -41,6 +41,7 @@ const nextConfig: NextConfig = {
         pathname: '/storage/v1/object/public/**',
       },
     ],
+    qualities: [75, 85, 90], // Configure quality levels used in the app
   },
 };
 

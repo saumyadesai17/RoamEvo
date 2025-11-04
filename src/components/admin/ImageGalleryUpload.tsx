@@ -2,6 +2,8 @@
 
 import { useState, useRef } from 'react';
 import Image from 'next/image';
+import ConfirmDialog from './ConfirmDialog';
+import AlertDialog from './AlertDialog';
 
 interface ImageGalleryUploadProps {
   value: string[];
@@ -21,6 +23,14 @@ export default function ImageGalleryUpload({
   className = ''
 }: ImageGalleryUploadProps) {
   const [uploading, setUploading] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [imageToDelete, setImageToDelete] = useState<number | null>(null);
+  const [alertState, setAlertState] = useState<{ show: boolean; title: string; message: string; variant: 'success' | 'error' | 'warning' | 'info' }>({
+    show: false,
+    title: '',
+    message: '',
+    variant: 'info'
+  });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -29,18 +39,33 @@ export default function ImageGalleryUpload({
 
     const remaining = maxImages - value.length;
     if (files.length > remaining) {
-      alert(`You can only upload ${remaining} more image(s)`);
+      setAlertState({
+        show: true,
+        title: 'Too Many Images',
+        message: `You can only upload ${remaining} more image(s)`,
+        variant: 'warning'
+      });
       return;
     }
 
     // Validate file types and sizes
     for (const file of files) {
       if (!file.type.startsWith('image/')) {
-        alert('Please select only image files');
+        setAlertState({
+          show: true,
+          title: 'Invalid File Type',
+          message: 'Please select only image files',
+          variant: 'error'
+        });
         return;
       }
       if (file.size > 10 * 1024 * 1024) {
-        alert('Each image should be less than 10MB');
+        setAlertState({
+          show: true,
+          title: 'File Too Large',
+          message: 'Each image should be less than 10MB',
+          variant: 'error'
+        });
         return;
       }
     }
@@ -73,7 +98,12 @@ export default function ImageGalleryUpload({
     } catch (error) {
       console.error('Upload error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to upload images';
-      alert(`Upload failed: ${errorMessage}\n\nNote: Make sure storage buckets are set up in Supabase.`);
+      setAlertState({
+        show: true,
+        title: 'Upload Failed',
+        message: `${errorMessage}\n\nNote: Make sure storage buckets are set up in Supabase.`,
+        variant: 'error'
+      });
     } finally {
       setUploading(false);
       if (fileInputRef.current) {
@@ -82,9 +112,68 @@ export default function ImageGalleryUpload({
     }
   };
 
-  const handleRemove = (index: number) => {
-    const newUrls = value.filter((_, i) => i !== index);
+  const handleRemove = async (index: number) => {
+    setImageToDelete(index);
+    setShowConfirm(true);
+  };
+
+  const confirmDelete = async () => {
+    if (imageToDelete === null) return;
+    
+    const imageUrl = value[imageToDelete];
+    setShowConfirm(false);
+
+    try {
+      // Extract file path from URL
+      // URL format: https://xxx.supabase.co/storage/v1/object/public/bucket-name/path/to/file.jpg
+      const urlParts = imageUrl.split('/storage/v1/object/public/');
+      if (urlParts.length === 2) {
+        const [bucketAndPath] = urlParts[1].split('/');
+        const filePath = urlParts[1].substring(bucketAndPath.length + 1);
+        
+        console.log('[Delete] Attempting to delete from storage:', { bucket: bucketAndPath, filePath });
+        
+        // Call API to delete from storage
+        const response = await fetch('/api/upload', {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            bucket: bucketAndPath,
+            filePath: filePath,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          console.error('[Delete] Storage deletion failed:', data);
+          // Continue with removal even if storage deletion fails
+          setAlertState({
+            show: true,
+            title: 'Storage Warning',
+            message: `Failed to delete from storage: ${data.error || 'Unknown error'}\nThe image will be removed from the database but may remain in storage.`,
+            variant: 'warning'
+          });
+        } else {
+          console.log('[Delete] Successfully deleted from storage');
+        }
+      }
+    } catch (error) {
+      console.error('[Delete] Error deleting from storage:', error);
+      setAlertState({
+        show: true,
+        title: 'Storage Warning',
+        message: 'Could not delete from storage. The image will be removed from the database but may remain in storage.',
+        variant: 'warning'
+      });
+    }
+
+    // Remove from array
+    const newUrls = value.filter((_, i) => i !== imageToDelete);
     onChange(newUrls);
+    setImageToDelete(null);
   };
 
   const handleReorder = (fromIndex: number, toIndex: number) => {
@@ -201,6 +290,30 @@ export default function ImageGalleryUpload({
           JPG, PNG or WebP. Max 10MB per image. {value.length > 0 && 'Hover to reorder or remove.'}
         </p>
       </div>
+
+      {/* Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showConfirm}
+        onCancel={() => {
+          setShowConfirm(false);
+          setImageToDelete(null);
+        }}
+        onConfirm={confirmDelete}
+        title="Delete Image?"
+        message="Are you sure you want to delete this image? This will permanently remove it from storage."
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        variant="danger"
+      />
+
+      {/* Alert Dialog */}
+      <AlertDialog
+        isOpen={alertState.show}
+        onClose={() => setAlertState({ ...alertState, show: false })}
+        title={alertState.title}
+        message={alertState.message}
+        variant={alertState.variant}
+      />
     </div>
   );
 }

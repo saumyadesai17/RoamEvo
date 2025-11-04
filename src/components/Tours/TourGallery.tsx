@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import { ChevronLeftIcon, ChevronRightIcon, XMarkIcon, PhotoIcon } from '@heroicons/react/24/outline';
 
@@ -15,7 +15,29 @@ interface TourGalleryProps {
 const TourGallery = ({ images, title }: TourGalleryProps) => {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [showFullGallery, setShowFullGallery] = useState(false);
+  const [loadedImages, setLoadedImages] = useState<Set<number>>(new Set([0]));
   const thumbnailContainerRef = useRef<HTMLDivElement>(null);
+
+  // Preload adjacent images for faster navigation
+  useEffect(() => {
+    if (showFullGallery && selectedImageIndex !== null) {
+      const imagesToPreload = [
+        selectedImageIndex,
+        selectedImageIndex - 1 >= 0 ? selectedImageIndex - 1 : images.length - 1,
+        selectedImageIndex + 1 < images.length ? selectedImageIndex + 1 : 0,
+      ];
+
+      imagesToPreload.forEach(index => {
+        if (!loadedImages.has(index)) {
+          const img = new window.Image();
+          img.src = images[index].src;
+          img.onload = () => {
+            setLoadedImages(prev => new Set([...prev, index]));
+          };
+        }
+      });
+    }
+  }, [selectedImageIndex, showFullGallery, images, loadedImages]);
 
   const handleImageClick = (index: number) => {
     setSelectedImageIndex(index);
@@ -30,13 +52,13 @@ const TourGallery = ({ images, title }: TourGalleryProps) => {
     document.body.style.overflow = 'unset';
   };
 
-  const handleFullGalleryPrevious = () => {
-    setSelectedImageIndex(selectedImageIndex > 0 ? selectedImageIndex - 1 : images.length - 1);
-  };
+  const handleFullGalleryPrevious = useCallback(() => {
+    setSelectedImageIndex(prev => prev > 0 ? prev - 1 : images.length - 1);
+  }, [images.length]);
 
-  const handleFullGalleryNext = () => {
-    setSelectedImageIndex(selectedImageIndex < images.length - 1 ? selectedImageIndex + 1 : 0);
-  };
+  const handleFullGalleryNext = useCallback(() => {
+    setSelectedImageIndex(prev => prev < images.length - 1 ? prev + 1 : 0);
+  }, [images.length]);
 
   // Auto-scroll thumbnails to center the selected image
   useEffect(() => {
@@ -65,6 +87,24 @@ const TourGallery = ({ images, title }: TourGalleryProps) => {
     };
   }, []);
 
+  // Keyboard navigation
+  useEffect(() => {
+    if (!showFullGallery) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft') {
+        handleFullGalleryPrevious();
+      } else if (e.key === 'ArrowRight') {
+        handleFullGalleryNext();
+      } else if (e.key === 'Escape') {
+        closeGallery();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showFullGallery, selectedImageIndex, handleFullGalleryNext, handleFullGalleryPrevious]);
+
   return (
     <>
       <div className="mb-4 sm:mb-6 lg:mb-8 2xl:mb-12">
@@ -82,8 +122,9 @@ const TourGallery = ({ images, title }: TourGalleryProps) => {
               className="object-cover transition-transform duration-300 group-hover:scale-105"
               sizes="50vw"
               priority
+              quality={85}
             />
-            <div className="absolute inset-0 bg-gradient-to-r from-black/50 to-transparent flex items-center justify-center">
+            <div className="absolute inset-0 bg-linear-to-r from-black/50 to-transparent flex items-center justify-center">
               <div className="text-white text-4xl xl:text-5xl 2xl:text-6xl font-bold tracking-wider text-center px-4 uppercase">
                 {title || 'ROAMEVO'}
               </div>
@@ -105,6 +146,7 @@ const TourGallery = ({ images, title }: TourGalleryProps) => {
                     fill
                     className="object-cover transition-transform duration-300 group-hover:scale-105"
                     sizes="25vw"
+                    quality={85}
                   />
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300" />
                 </div>
@@ -139,8 +181,9 @@ const TourGallery = ({ images, title }: TourGalleryProps) => {
               className="object-cover"
               sizes="100vw"
               priority
+              quality={85}
             />
-            <div className="absolute inset-0 bg-gradient-to-r from-black/50 to-transparent flex items-center justify-center">
+            <div className="absolute inset-0 bg-linear-to-r from-black/50 to-transparent flex items-center justify-center">
               <div className="text-white text-2xl sm:text-3xl md:text-4xl font-bold tracking-wider text-center px-4 uppercase">
                 {title || 'ROAMEVO'}
               </div>
@@ -211,7 +254,34 @@ const TourGallery = ({ images, title }: TourGalleryProps) => {
                 fill
                 className="object-contain"
                 sizes="100vw"
+                priority={selectedImageIndex === 0 || selectedImageIndex === 1}
+                quality={90}
+                loading={selectedImageIndex <= 1 ? 'eager' : 'lazy'}
               />
+              
+              {/* Preload adjacent images (hidden) */}
+              {selectedImageIndex > 0 && (
+                <div className="hidden">
+                  <Image
+                    src={images[selectedImageIndex - 1]?.src || ''}
+                    alt="preload"
+                    width={1920}
+                    height={1080}
+                    priority
+                  />
+                </div>
+              )}
+              {selectedImageIndex < images.length - 1 && (
+                <div className="hidden">
+                  <Image
+                    src={images[selectedImageIndex + 1]?.src || ''}
+                    alt="preload"
+                    width={1920}
+                    height={1080}
+                    priority
+                  />
+                </div>
+              )}
             </div>
 
             {/* Navigation arrows */}
@@ -238,7 +308,7 @@ const TourGallery = ({ images, title }: TourGalleryProps) => {
                   <button
                     key={index}
                     onClick={() => setSelectedImageIndex(index)}
-                    className={`relative flex-shrink-0 w-18 h-18 rounded-lg overflow-hidden border-2 transition-all duration-300 ${
+                    className={`relative shrink-0 w-18 h-18 rounded-lg overflow-hidden border-2 transition-all duration-300 ${
                       index === selectedImageIndex 
                         ? 'border-white shadow-lg scale-105' 
                         : 'border-white/30 hover:border-white/70 hover:scale-105'
@@ -250,6 +320,7 @@ const TourGallery = ({ images, title }: TourGalleryProps) => {
                       fill
                       className="object-cover"
                       sizes="64px"
+                      quality={75}
                     />
                   </button>
                 ))}

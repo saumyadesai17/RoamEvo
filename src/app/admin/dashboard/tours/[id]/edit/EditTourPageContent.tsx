@@ -9,6 +9,8 @@ import RichTextEditor from '@/components/admin/RichTextEditor';
 import ItineraryBuilder from '@/components/admin/ItineraryBuilder';
 import EssentialsManager from '@/components/admin/EssentialsManager';
 import InclusionsManager from '@/components/admin/InclusionsManager';
+import TourDatesManager from '@/components/admin/TourDatesManager';
+import AlertDialog from '@/components/admin/AlertDialog';
 
 interface ItineraryDay {
   day_number: number;
@@ -45,6 +47,12 @@ export default function EditTourPageContent({ tourId }: EditTourPageContentProps
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('basic');
+  const [alertState, setAlertState] = useState<{ show: boolean; title: string; message: string; variant: 'success' | 'error' | 'warning' | 'info' }>({
+    show: false,
+    title: '',
+    message: '',
+    variant: 'info'
+  });
   const [formData, setFormData] = useState({
     title: '',
     slug: '',
@@ -192,13 +200,23 @@ export default function EditTourPageContent({ tourId }: EditTourPageContentProps
             })(),
           });
         } else {
-          alert('Failed to load tour');
-          router.push('/admin/dashboard/tours');
+          setAlertState({
+            show: true,
+            title: 'Error',
+            message: 'Failed to load tour',
+            variant: 'error'
+          });
+          setTimeout(() => router.push('/admin/dashboard/tours'), 1500);
         }
       } catch (error) {
         console.error('Error loading tour:', error);
-        alert('Failed to load tour');
-        router.push('/admin/dashboard/tours');
+        setAlertState({
+          show: true,
+          title: 'Error',
+          message: 'Failed to load tour',
+          variant: 'error'
+        });
+        setTimeout(() => router.push('/admin/dashboard/tours'), 1500);
       } finally {
         setLoading(false);
       }
@@ -212,23 +230,49 @@ export default function EditTourPageContent({ tourId }: EditTourPageContentProps
     setSaving(true);
 
     try {
+      // Clean up essentials data before sending
+      const cleanedEssentials = formData.essentials.map(essential => ({
+        ...essential,
+        items: essential.items.filter(item => item.trim()) // Remove empty items
+      })).filter(essential => essential.items.length > 0); // Remove categories with no items
+
+      const submitData = {
+        ...formData,
+        essentials: cleanedEssentials
+      };
+
       const response = await fetch(`/api/admin/tours/${tourId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(submitData),
       });
 
       const result = await response.json();
 
       if (result.success) {
-        alert('Tour updated successfully!');
-        router.push('/admin/dashboard/tours');
+        setAlertState({
+          show: true,
+          title: 'Success',
+          message: 'Tour updated successfully!',
+          variant: 'success'
+        });
+        setTimeout(() => router.push('/admin/dashboard/tours'), 1500);
       } else {
-        alert('Failed to update tour: ' + (result.error || 'Unknown error'));
+        setAlertState({
+          show: true,
+          title: 'Error',
+          message: result.error || 'Unknown error',
+          variant: 'error'
+        });
       }
     } catch (error) {
       console.error('Error updating tour:', error);
-      alert('Failed to update tour');
+      setAlertState({
+        show: true,
+        title: 'Error',
+        message: 'Failed to update tour',
+        variant: 'error'
+      });
     } finally {
       setSaving(false);
     }
@@ -263,6 +307,7 @@ export default function EditTourPageContent({ tourId }: EditTourPageContentProps
     { id: 'itinerary', label: 'Itinerary' },
     { id: 'essentials', label: 'Essentials' },
     { id: 'inclusions', label: 'Inclusions' },
+    { id: 'dates', label: 'Departure Dates' },
   ];
 
   if (loading) {
@@ -890,6 +935,13 @@ export default function EditTourPageContent({ tourId }: EditTourPageContentProps
                 />
               </div>
             )}
+
+            {/* Departure Dates Tab */}
+            {activeTab === 'dates' && (
+              <div>
+                <TourDatesManager tourId={tourId} />
+              </div>
+            )}
           </div>
 
           {/* Form Actions */}
@@ -914,6 +966,15 @@ export default function EditTourPageContent({ tourId }: EditTourPageContentProps
           </div>
         </form>
       </div>
+
+      {/* Alert Dialog */}
+      <AlertDialog
+        isOpen={alertState.show}
+        onClose={() => setAlertState({ ...alertState, show: false })}
+        title={alertState.title}
+        message={alertState.message}
+        variant={alertState.variant}
+      />
     </div>
   );
 }
