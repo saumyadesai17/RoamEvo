@@ -152,9 +152,10 @@ export default function ToursListPage() {
         </div>
         <Link
           href="/admin/dashboard/tours/create"
-          className="inline-flex items-center justify-center px-6 py-2.5 bg-[#4A5B2D] text-white rounded-md hover:bg-[#3d4a24] transition-colors text-sm"
+          className="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-[#4A5B2D] text-white rounded-md hover:bg-[#3d4a24] transition-colors text-sm font-medium"
         >
-          + New Tour
+          <span className="text-2xl">+</span>
+          <span>New Tour</span>
         </Link>
       </div>
 
