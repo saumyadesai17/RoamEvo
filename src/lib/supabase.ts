@@ -2,12 +2,13 @@ import { createBrowserClient } from '@supabase/ssr'
 import { createClient as createServerClient } from '@supabase/supabase-js'
 
 // Supabase client configuration
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables. Please check your .env.local file.');
+// Only throw error at runtime (not during build)
+if (typeof window !== 'undefined' && (!supabaseUrl || !supabaseAnonKey)) {
+  console.error('Missing Supabase environment variables. Please check your .env.local file.');
 }
 
 // Create a browser client for client-side usage (replaces old createClient)
