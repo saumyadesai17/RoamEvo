@@ -110,9 +110,9 @@ export async function PUT(
         seo_title: data.seo_title,
         seo_description: data.seo_description,
         metadata: {
-          breadcrumbs: data.breadcrumbs?.filter((b: string) => b.trim()) || [],
-          destination_name: data.destination || null, // Store destination name temporarily
           ...data.metadata,
+          breadcrumbs: data.breadcrumbs?.filter((b: string) => b.trim()) || [],
+          destination_name: data.destination || null, // Store destination name (overrides any old value)
         },
         is_featured: data.is_featured,
         is_bestseller: data.is_bestseller,

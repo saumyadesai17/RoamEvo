@@ -189,7 +189,11 @@ export default async function TourPage({
       priceCurrency: tour.currency || 'INR',
       availability: 'https://schema.org/InStock',
       priceValidUntil:
-        tour.available_to || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        tour.available_to || (() => {
+          const oneYearFromNow = new Date();
+          oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
+          return oneYearFromNow.toISOString().split('T')[0];
+        })(),
       description: `${tour.duration_days}-day ${tour.title} including accommodation, transport, activities, and meals`,
     },
     itinerary: sortedItinerary.map((day: { title: string; description: string }) => ({

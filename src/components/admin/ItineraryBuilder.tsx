@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import RichTextEditor from '@/components/Admin/RichTextEditor';
-import ImageGalleryUpload from '@/components/Admin/ImageGalleryUpload';
+import RichTextEditor from '@/components/admin/RichTextEditor';
+import ImageGalleryUpload from '@/components/admin/ImageGalleryUpload';
 
 export interface ItineraryDay {
   day_number: number;

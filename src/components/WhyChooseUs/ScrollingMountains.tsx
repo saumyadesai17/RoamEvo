@@ -2,6 +2,30 @@
 import { useEffect, useRef, forwardRef } from 'react';
 import Image from 'next/image';
 
+// Forward ref to the underlying img element in next/image
+const CustomImage = forwardRef<HTMLImageElement, React.ComponentProps<typeof Image>>(
+  (props, ref) => (
+    <Image
+      {...props}
+      ref={ref}
+      priority
+      alt='Himalaya Mountains'
+      draggable={false}
+      className={
+        "absolute left-0 bottom-0 w-full h-auto object-cover will-change-transform " +
+        (props.className || "")
+      }
+      style={{ 
+        minHeight: '100%', 
+        maxHeight: 'none', 
+        transition: 'none', // Remove transition for smoother scroll-driven animation
+        ...(props.style || {}) 
+      }}
+    />
+  )
+);
+CustomImage.displayName = 'CustomImage';
+
 const ScrollingMountains = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
@@ -79,30 +103,6 @@ const ScrollingMountains = () => {
       window.removeEventListener('resize', handleScroll);
     };
   }, []);
-
-  // Forward ref to the underlying img element in next/image
-  const CustomImage = forwardRef<HTMLImageElement, React.ComponentProps<typeof Image>>(
-    (props, ref) => (
-      <Image
-        {...props}
-        ref={ref}
-        priority
-        alt='Himalaya Mountains'
-        draggable={false}
-        className={
-          "absolute left-0 bottom-0 w-full h-auto object-cover will-change-transform " +
-          (props.className || "")
-        }
-        style={{ 
-          minHeight: '100%', 
-          maxHeight: 'none', 
-          transition: 'none', // Remove transition for smoother scroll-driven animation
-          ...(props.style || {}) 
-        }}
-      />
-    )
-  );
-  CustomImage.displayName = 'CustomImage';
 
   return (
     <div

@@ -2,12 +2,12 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import RichTextEditor from '@/components/Admin/RichTextEditor';
-import ImageUpload from '@/components/Admin/ImageUpload';
-import ImageGalleryUpload from '@/components/Admin/ImageGalleryUpload';
-import ItineraryBuilder, { type ItineraryDay } from '@/components/Admin/ItineraryBuilder';
-import EssentialsManager, { type Essential } from '@/components/Admin/EssentialsManager';
-import InclusionsManager, { type Inclusion } from '@/components/Admin/InclusionsManager';
+import RichTextEditor from '@/components/admin/RichTextEditor';
+import ImageUpload from '@/components/admin/ImageUpload';
+import ImageGalleryUpload from '@/components/admin/ImageGalleryUpload';
+import ItineraryBuilder, { type ItineraryDay } from '@/components/admin/ItineraryBuilder';
+import EssentialsManager, { type Essential } from '@/components/admin/EssentialsManager';
+import InclusionsManager, { type Inclusion } from '@/components/admin/InclusionsManager';
 
 type TourStatus = 'draft' | 'published' | 'archived' | 'sold_out';
 type TourCategory = 'domestic' | 'international' | 'adventure' | 'spiritual' | 'cultural' | 'beach' | 'mountain' | 'desert' | 'wildlife';
