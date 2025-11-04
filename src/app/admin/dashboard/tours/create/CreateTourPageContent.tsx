@@ -1,146 +1,91 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import RichTextEditor from '@/components/admin/RichTextEditor';
 import ImageUpload from '@/components/admin/ImageUpload';
 import ImageGalleryUpload from '@/components/admin/ImageGalleryUpload';
-import ItineraryBuilder, { type ItineraryDay } from '@/components/admin/ItineraryBuilder';
-import EssentialsManager, { type Essential } from '@/components/admin/EssentialsManager';
-import InclusionsManager, { type Inclusion } from '@/components/admin/InclusionsManager';
+import PDFUpload from '@/components/admin/PDFUpload';
+import RichTextEditor from '@/components/admin/RichTextEditor';
+import ItineraryBuilder from '@/components/admin/ItineraryBuilder';
+import EssentialsManager from '@/components/admin/EssentialsManager';
+import InclusionsManager from '@/components/admin/InclusionsManager';
 import AlertDialog from '@/components/admin/AlertDialog';
 
-type TourStatus = 'draft' | 'published' | 'archived' | 'sold_out';
-type TourCategory = 'domestic' | 'international' | 'adventure' | 'spiritual' | 'cultural' | 'beach' | 'mountain' | 'desert' | 'wildlife';
-type DifficultyLevel = 'easy' | 'moderate' | 'challenging' | 'difficult' | 'extreme';
+interface ItineraryDay {
+  day_number: number;
+  title: string;
+  description: string;
+  mood?: string;
+  activities: string[];
+  meals: {
+    breakfast: boolean;
+    lunch: boolean;
+    dinner: boolean;
+  };
+  accommodation?: string;
+  images: string[];
+}
 
-// Initial form state
-const initialFormData = {
-  // Basic Info
-  title: '',
-  slug: '',
-  destination: '',
-  category: 'domestic' as TourCategory,
-  status: 'draft' as TourStatus,
-  difficulty_level: 'moderate' as DifficultyLevel,
-  
-  // Description
-  overview: '',
-  highlights: [''],
-  
-  // Duration & Group
-  duration_days: 5,
-  duration_nights: 4,
-  group_size_min: 4,
-  group_size_max: 15,
-  min_age: 10,
-  max_age: 60,
-  
-  // Pricing
-  base_price: 0,
-  currency: 'INR',
-  
-  // Trip Vibes (1-5)
-  adventure_level: 3,
-  spiritual_level: 3,
-  chill_level: 3,
-  nature_level: 3,
-  cultural_level: 3,
-  
-  // Media
-  cover_image: '',
-  gallery_images: [] as string[],
-  
-  // Itinerary, Essentials, Inclusions
-  itinerary: [] as ItineraryDay[],
-  essentials: [] as Essential[],
-  inclusions: [] as Inclusion[],
-  
-  // Features
-  is_featured: false,
-  is_bestseller: false,
-  
-  // SEO
-  seo_title: '',
-  seo_description: '',
-  
-  // Breadcrumbs
-  breadcrumbs: ['Home', 'Tours'],
-};
+interface Essential {
+  category: 'carry' | 'know' | 'tips';
+  items: string[];
+}
+
+interface Inclusion {
+  type: 'inclusion' | 'exclusion';
+  item: string;
+  description?: string;
+}
 
 export default function CreateTourPageContent() {
   const router = useRouter();
-  const [formData, setFormData] = useState(initialFormData);
-  const [activeTab, setActiveTab] = useState<'basic' | 'description' | 'pricing' | 'media' | 'itinerary' | 'essentials' | 'inclusions' | 'features'>('basic');
   const [saving, setSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState('basic');
   const [alertState, setAlertState] = useState<{ show: boolean; title: string; message: string; variant: 'success' | 'error' | 'warning' | 'info' }>({
     show: false,
     title: '',
     message: '',
     variant: 'info'
   });
-
-  // Auto-generate slug from title
-  const handleTitleChange = (title: string) => {
-    setFormData(prev => ({
-      ...prev,
-      title,
-      slug: title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
-    }));
-  };
-
-  // Handle highlight changes
-  const handleHighlightChange = (index: number, value: string) => {
-    const newHighlights = [...formData.highlights];
-    newHighlights[index] = value;
-    setFormData(prev => ({ ...prev, highlights: newHighlights }));
-  };
-
-  const addHighlight = () => {
-    setFormData(prev => ({ ...prev, highlights: [...prev.highlights, ''] }));
-  };
-
-  const removeHighlight = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      highlights: prev.highlights.filter((_, i) => i !== index),
-    }));
-  };
-
-  // Handle breadcrumb changes
-  const handleBreadcrumbChange = (index: number, value: string) => {
-    const newBreadcrumbs = [...formData.breadcrumbs];
-    newBreadcrumbs[index] = value;
-    setFormData(prev => ({ ...prev, breadcrumbs: newBreadcrumbs }));
-  };
-
-  const addBreadcrumb = () => {
-    setFormData(prev => ({ ...prev, breadcrumbs: [...prev.breadcrumbs, ''] }));
-  };
-
-  const removeBreadcrumb = (index: number) => {
-    if (formData.breadcrumbs.length > 1) {
-      setFormData(prev => ({
-        ...prev,
-        breadcrumbs: prev.breadcrumbs.filter((_, i) => i !== index),
-      }));
-    }
-  };
+  const [formData, setFormData] = useState({
+    title: '',
+    slug: '',
+    destination: '',
+    category: 'domestic',
+    status: 'draft',
+    difficulty_level: 'moderate',
+    overview: '',
+    highlights: [''],
+    duration_days: 0,
+    duration_nights: 0,
+    group_size_min: 1,
+    group_size_max: 20,
+    min_age: 10,
+    max_age: 60,
+    base_price: 0,
+    currency: 'INR',
+    adventure_level: 5,
+    spiritual_level: 5,
+    chill_level: 5,
+    nature_level: 5,
+    cultural_level: 5,
+    cover_image: '',
+    gallery_images: [] as string[],
+    pdf_itinerary: '',
+    pdf_terms: '',
+    seo_title: '',
+    seo_description: '',
+    metadata: {},
+    breadcrumbs: [''],
+    is_featured: false,
+    is_bestseller: false,
+    itinerary: [] as ItineraryDay[],
+    essentials: [] as Essential[],
+    inclusions: [] as Inclusion[],
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Basic validation
-    if (!formData.title || !formData.slug || !formData.overview) {
-      setAlertState({
-        show: true,
-        title: 'Missing Information',
-        message: 'Please fill in all required fields (Title, Slug, Overview)',
-        variant: 'warning'
-      });
-      return;
-    }
-
     setSaving(true);
 
     try {
@@ -150,41 +95,44 @@ export default function CreateTourPageContent() {
         items: essential.items.filter(item => item.trim()) // Remove empty items
       })).filter(essential => essential.items.length > 0); // Remove categories with no items
 
+      const submitData = {
+        ...formData,
+        essentials: cleanedEssentials,
+        metadata: {
+          breadcrumbs: formData.breadcrumbs.filter(b => b.trim())
+        }
+      };
+
       const response = await fetch('/api/admin/tours', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...formData,
-          essentials: cleanedEssentials,
-          metadata: {
-            breadcrumbs: formData.breadcrumbs.filter(b => b.trim()),
-          },
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(submitData),
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to create tour');
+      const result = await response.json();
+
+      if (result.success) {
+        setAlertState({
+          show: true,
+          title: 'Success',
+          message: 'Tour created successfully!',
+          variant: 'success'
+        });
+        setTimeout(() => router.push(`/admin/dashboard/tours/${result.tour.id}/edit`), 1500);
+      } else {
+        setAlertState({
+          show: true,
+          title: 'Error',
+          message: result.error || 'Unknown error',
+          variant: 'error'
+        });
       }
-
-      const data = await response.json();
-      setAlertState({
-        show: true,
-        title: 'Success',
-        message: 'Tour created successfully!',
-        variant: 'success'
-      });
-      // Navigate after a short delay to show success message
-      setTimeout(() => {
-        router.push(`/admin/dashboard/tours/${data.tour.id}/edit`);
-      }, 1500);
     } catch (error) {
       console.error('Error creating tour:', error);
       setAlertState({
         show: true,
         title: 'Error',
-        message: 'Failed to create tour. Please try again.',
+        message: 'Failed to create tour',
         variant: 'error'
       });
     } finally {
@@ -192,560 +140,672 @@ export default function CreateTourPageContent() {
     }
   };
 
+  const handleArrayChange = (field: string, index: number, value: string) => {
+    const newArray = [...(formData[field as keyof typeof formData] as string[])];
+    newArray[index] = value;
+    setFormData({ ...formData, [field]: newArray });
+  };
+
+  const handleAddArrayItem = (field: string) => {
+    setFormData({
+      ...formData,
+      [field]: [...(formData[field as keyof typeof formData] as string[]), ''],
+    });
+  };
+
+  const handleRemoveArrayItem = (field: string, index: number) => {
+    const newArray = (formData[field as keyof typeof formData] as string[]).filter(
+      (_, i) => i !== index
+    );
+    setFormData({ ...formData, [field]: newArray.length > 0 ? newArray : [''] });
+  };
+
   const tabs = [
-    { id: 'basic', label: 'Basic Info', icon: '📝' },
-    { id: 'description', label: 'Description', icon: '📄' },
-    { id: 'pricing', label: 'Pricing & Group', icon: '💰' },
-    { id: 'itinerary', label: 'Itinerary', icon: '📅' },
-    { id: 'essentials', label: 'Essentials', icon: '🎒' },
-    { id: 'inclusions', label: 'Inclusions', icon: '✓' },
-    { id: 'media', label: 'Images', icon: '🖼️' },
-    { id: 'features', label: 'Features & SEO', icon: '⚙️' },
-  ] as const;
+    { id: 'basic', label: 'Basic Info' },
+    { id: 'description', label: 'Description' },
+    { id: 'pricing', label: 'Pricing & Details' },
+    { id: 'media', label: 'Media' },
+    { id: 'features', label: 'Features' },
+    { id: 'itinerary', label: 'Itinerary' },
+    { id: 'essentials', label: 'Essentials' },
+    { id: 'inclusions', label: 'Inclusions' },
+  ];
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] p-6">
+    <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-light font-(family-name:--font-montserrat) text-gray-900 mb-2">
-            Create New Tour
-          </h1>
-          <p className="text-gray-600">Fill in the details below to create a new tour package</p>
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h1 className="text-4xl font-bold text-gray-900 mb-2" style={{ fontFamily: 'Montserrat' }}>
+              Create New Tour
+            </h1>
+            <p className="text-gray-700" style={{ fontFamily: 'Gideon Roman' }}>
+              Fill in the details below to create a new tour package
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => router.push('/admin/dashboard/tours')}
+            className="px-4 py-2 bg-white border border-gray-300 text-gray-900 rounded hover:bg-gray-50 font-medium"
+            style={{ fontFamily: 'Gideon Roman' }}
+          >
+            Cancel
+          </button>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          {/* Tabs */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
-            <div className="flex border-b border-gray-200 overflow-x-auto">
-              {tabs.map(tab => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex-1 min-w-[140px] px-6 py-4 text-sm font-medium transition-colors whitespace-nowrap ${
-                    activeTab === tab.id
-                      ? 'text-[#4A5B2D] border-b-2 border-[#4A5B2D] bg-[#4A5B2D]/5'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                  }`}
-                >
-                  <span className="mr-2">{tab.icon}</span>
-                  {tab.label}
-                </button>
-              ))}
-            </div>
+        {/* Tab Navigation */}
+        <div className="bg-white rounded-lg shadow-sm mb-6 overflow-x-auto">
+          <div className="flex border-b border-gray-200">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={`px-6 py-4 text-sm font-medium whitespace-nowrap transition-colors ${
+                  activeTab === tab.id
+                    ? 'border-b-2 border-[#4A5B2D] text-[#4A5B2D] bg-green-50'
+                    : 'text-gray-700 hover:text-gray-900 hover:bg-gray-50'
+                }`}
+                style={{ fontFamily: 'Montserrat' }}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
 
-            {/* Tab Content */}
-            <div className="p-8">
-              {/* Basic Info Tab */}
-              {activeTab === 'basic' && (
-                <div className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-900 mb-2">
-                        Tour Title <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.title}
-                        onChange={(e) => handleTitleChange(e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A5B2D] focus:border-transparent bg-white text-gray-900"
-                        placeholder="e.g., Uttarakhand Adventure 2025"
-                        required
-                      />
-                    </div>
+        <form onSubmit={handleSubmit} className="admin-form">
+          <div className="bg-white rounded-lg shadow-sm p-8">
+            {/* Basic Info Tab */}
+            {activeTab === 'basic' && (
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2" style={{ fontFamily: 'Montserrat' }}>
+                    Tour Title *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.title}
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-[#4A5B2D] focus:border-transparent bg-white text-gray-900"
+                    style={{ fontFamily: 'Gideon Roman' }}
+                    placeholder="e.g., Uttarakhand Adventure Trek"
+                  />
+                </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-900 mb-2">
-                        URL Slug <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.slug}
-                        onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value }))}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A5B2D] focus:border-transparent bg-white text-gray-900"
-                        placeholder="uttarakhand-adventure-2025"
-                        required
-                      />
-                      <p className="text-xs text-gray-500 mt-1">
-                        This will be the URL: /tours/{formData.slug || 'your-slug'}
-                      </p>
-                    </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2" style={{ fontFamily: 'Montserrat' }}>
+                    URL Slug *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.slug}
+                    onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-[#4A5B2D] focus:border-transparent bg-white text-gray-900"
+                    style={{ fontFamily: 'Gideon Roman' }}
+                    placeholder="e.g., uttarakhand-adventure-trek"
+                  />
+                </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-900 mb-2">
-                        Destination <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.destination}
-                        onChange={(e) => setFormData(prev => ({ ...prev, destination: e.target.value }))}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A5B2D] focus:border-transparent bg-white text-gray-900"
-                        placeholder="e.g., Uttarakhand, Bali, Ladakh"
-                        required
-                      />
-                      <p className="text-xs text-gray-500 mt-1">
-                        Location shown on tour cards
-                      </p>
-                    </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2" style={{ fontFamily: 'Montserrat' }}>
+                    Destination *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.destination}
+                    onChange={(e) => setFormData({ ...formData, destination: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-[#4A5B2D] focus:border-transparent bg-white text-gray-900"
+                    style={{ fontFamily: 'Gideon Roman' }}
+                    placeholder="e.g., Uttarakhand"
+                  />
+                </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-900 mb-2">
-                        Category
-                      </label>
-                      <select
-                        value={formData.category}
-                        onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value as 'domestic' | 'international' | 'adventure' | 'spiritual' | 'cultural' | 'beach' | 'mountain' | 'desert' | 'wildlife' }))}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A5B2D] focus:border-transparent bg-white text-gray-900"
-                      >
-                        <option value="domestic">Domestic</option>
-                        <option value="international">International</option>
-                        <option value="adventure">Adventure</option>
-                        <option value="spiritual">Spiritual</option>
-                        <option value="cultural">Cultural</option>
-                        <option value="beach">Beach</option>
-                        <option value="mountain">Mountain</option>
-                        <option value="desert">Desert</option>
-                        <option value="wildlife">Wildlife</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-900 mb-2">
-                        Difficulty Level
-                      </label>
-                      <select
-                        value={formData.difficulty_level}
-                        onChange={(e) => setFormData(prev => ({ ...prev, difficulty_level: e.target.value as 'easy' | 'moderate' | 'challenging' | 'difficult' | 'extreme' }))}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A5B2D] focus:border-transparent bg-white text-gray-900"
-                      >
-                        <option value="easy">Easy</option>
-                        <option value="moderate">Moderate</option>
-                        <option value="challenging">Challenging</option>
-                        <option value="difficult">Difficult</option>
-                        <option value="extreme">Extreme</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-900 mb-2">
-                        Status
-                      </label>
-                      <select
-                        value={formData.status}
-                        onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value as 'draft' | 'published' | 'archived' | 'sold_out' }))}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A5B2D] focus:border-transparent bg-white text-gray-900"
-                      >
-                        <option value="draft">Draft</option>
-                        <option value="published">Published</option>
-                        <option value="archived">Archived</option>
-                        <option value="sold_out">Sold Out</option>
-                      </select>
-                    </div>
+                <div className="grid grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-900 mb-2" style={{ fontFamily: 'Montserrat' }}>
+                      Category *
+                    </label>
+                    <select
+                      value={formData.category}
+                      onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-[#4A5B2D] focus:border-transparent bg-white text-gray-900"
+                      style={{ fontFamily: 'Gideon Roman' }}
+                    >
+                      <option value="domestic">Domestic</option>
+                      <option value="international">International</option>
+                    </select>
                   </div>
 
-                  {/* Breadcrumbs */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-900 mb-2">
-                      Breadcrumbs (Navigation Trail)
+                    <label className="block text-sm font-semibold text-gray-900 mb-2" style={{ fontFamily: 'Montserrat' }}>
+                      Status *
                     </label>
-                    <div className="space-y-2">
-                      {formData.breadcrumbs.map((breadcrumb, index) => (
-                        <div key={index} className="flex gap-2">
-                          <input
-                            type="text"
-                            value={breadcrumb}
-                            onChange={(e) => handleBreadcrumbChange(index, e.target.value)}
-                            className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A5B2D] focus:border-transparent bg-white text-gray-900"
-                            placeholder={`Breadcrumb ${index + 1}`}
-                          />
-                          {formData.breadcrumbs.length > 1 && (
-                            <button
-                              type="button"
-                              onClick={() => removeBreadcrumb(index)}
-                              className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            >
-                              Remove
-                            </button>
-                          )}
-                        </div>
-                      ))}
-                      <button
-                        type="button"
-                        onClick={addBreadcrumb}
-                        className="px-4 py-2 text-[#4A5B2D] hover:bg-[#4A5B2D]/5 rounded-lg transition-colors text-sm font-medium"
-                      >
-                        + Add Breadcrumb
-                      </button>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-2">
-                      Example: Home → Tours → Uttarakhand → Adventure Package
-                    </p>
+                    <select
+                      value={formData.status}
+                      onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-[#4A5B2D] focus:border-transparent bg-white text-gray-900"
+                      style={{ fontFamily: 'Gideon Roman' }}
+                    >
+                      <option value="draft">Draft</option>
+                      <option value="published">Published</option>
+                      <option value="archived">Archived</option>
+                    </select>
                   </div>
                 </div>
-              )}
 
-              {/* Description Tab */}
-              {activeTab === 'description' && (
-                <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2" style={{ fontFamily: 'Montserrat' }}>
+                    Difficulty Level *
+                  </label>
+                  <select
+                    value={formData.difficulty_level}
+                    onChange={(e) => setFormData({ ...formData, difficulty_level: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-[#4A5B2D] focus:border-transparent bg-white text-gray-900"
+                    style={{ fontFamily: 'Gideon Roman' }}
+                  >
+                    <option value="easy">Easy</option>
+                    <option value="moderate">Moderate</option>
+                    <option value="challenging">Challenging</option>
+                    <option value="difficult">Difficult</option>
+                    <option value="extreme">Extreme</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2" style={{ fontFamily: 'Montserrat' }}>
+                    Breadcrumbs
+                  </label>
+                  {formData.breadcrumbs.map((breadcrumb, index) => (
+                    <div key={index} className="flex gap-2 mb-2">
+                      <input
+                        type="text"
+                        value={breadcrumb}
+                        onChange={(e) => handleArrayChange('breadcrumbs', index, e.target.value)}
+                        className="flex-1 px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-[#4A5B2D] focus:border-transparent bg-white text-gray-900"
+                        style={{ fontFamily: 'Gideon Roman' }}
+                        placeholder="e.g., Uttarakhand Tours"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveArrayItem('breadcrumbs', index)}
+                        className="px-3 py-2 bg-red-50 text-red-600 rounded hover:bg-red-100"
+                        style={{ fontFamily: 'Gideon Roman' }}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => handleAddArrayItem('breadcrumbs')}
+                    className="text-[#4A5B2D] hover:underline text-sm"
+                    style={{ fontFamily: 'Gideon Roman' }}
+                  >
+                    + Add Breadcrumb
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Description Tab */}
+            {activeTab === 'description' && (
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2" style={{ fontFamily: 'Montserrat' }}>
+                    Tour Overview *
+                  </label>
+                  <RichTextEditor
+                    content={formData.overview}
+                    onChange={(html) => setFormData({ ...formData, overview: html })}
+                    placeholder="Write a compelling overview of the tour..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2" style={{ fontFamily: 'Montserrat' }}>
+                    Highlights
+                  </label>
+                  {formData.highlights.map((highlight, index) => (
+                    <div key={index} className="flex gap-2 mb-2">
+                      <input
+                        type="text"
+                        value={highlight}
+                        onChange={(e) => handleArrayChange('highlights', index, e.target.value)}
+                        className="flex-1 px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-[#4A5B2D] focus:border-transparent"
+                        style={{ fontFamily: 'Gideon Roman' }}
+                        placeholder="e.g., Visit to Kedarnath Temple"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveArrayItem('highlights', index)}
+                        className="px-3 py-2 bg-red-50 text-red-600 rounded hover:bg-red-100"
+                        style={{ fontFamily: 'Gideon Roman' }}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => handleAddArrayItem('highlights')}
+                    className="text-[#4A5B2D] hover:underline text-sm"
+                    style={{ fontFamily: 'Gideon Roman' }}
+                  >
+                    + Add Highlight
+                  </button>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2" style={{ fontFamily: 'Montserrat' }}>
+                    SEO Title
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.seo_title}
+                    onChange={(e) => setFormData({ ...formData, seo_title: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-[#4A5B2D] focus:border-transparent"
+                    style={{ fontFamily: 'Gideon Roman' }}
+                    placeholder="SEO-friendly title (recommended: 50-60 characters)"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2" style={{ fontFamily: 'Montserrat' }}>
+                    SEO Description
+                  </label>
+                  <textarea
+                    value={formData.seo_description}
+                    onChange={(e) => setFormData({ ...formData, seo_description: e.target.value })}
+                    rows={3}
+                    className="w-full px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-[#4A5B2D] focus:border-transparent"
+                    style={{ fontFamily: 'Gideon Roman' }}
+                    placeholder="SEO meta description (recommended: 150-160 characters)"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Pricing & Details Tab */}
+            {activeTab === 'pricing' && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-900 mb-2">
-                      Tour Overview <span className="text-red-500">*</span>
+                    <label className="block text-sm font-medium text-gray-700 mb-2" style={{ fontFamily: 'Montserrat' }}>
+                      Duration (Days) *
                     </label>
-                    <p className="text-sm text-gray-600 mb-3">
-                      Write a compelling description of your tour. Use the formatting toolbar to make it look great!
-                    </p>
-                    <RichTextEditor
-                      content={formData.overview}
-                      onChange={(html) => setFormData(prev => ({ ...prev, overview: html }))}
-                      placeholder="Describe the tour experience, what makes it special, what travelers can expect..."
+                    <input
+                      type="number"
+                      required
+                      min="1"
+                      value={formData.duration_days || ''}
+                      onChange={(e) =>
+                        setFormData({ ...formData, duration_days: parseInt(e.target.value) || 0 })
+                      }
+                      className="w-full px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-[#4A5B2D] focus:border-transparent"
+                      style={{ fontFamily: 'Gideon Roman' }}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-900 mb-2">
-                      Tour Highlights
+                    <label className="block text-sm font-medium text-gray-700 mb-2" style={{ fontFamily: 'Montserrat' }}>
+                      Duration (Nights) *
                     </label>
-                    <div className="space-y-2">
-                      {formData.highlights.map((highlight, index) => (
-                        <div key={index} className="flex gap-2">
-                          <input
-                            type="text"
-                            value={highlight}
-                            onChange={(e) => handleHighlightChange(index, e.target.value)}
-                            className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A5B2D] focus:border-transparent bg-white text-gray-900"
-                            placeholder={`Highlight ${index + 1}`}
-                          />
-                          {formData.highlights.length > 1 && (
-                            <button
-                              type="button"
-                              onClick={() => removeHighlight(index)}
-                              className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            >
-                              Remove
-                            </button>
-                          )}
-                        </div>
-                      ))}
-                      <button
-                        type="button"
-                        onClick={addHighlight}
-                        className="px-4 py-2 text-[#4A5B2D] hover:bg-[#4A5B2D]/5 rounded-lg transition-colors text-sm font-medium"
-                      >
-                        + Add Highlight
-                      </button>
-                    </div>
+                    <input
+                      type="number"
+                      required
+                      min="0"
+                      value={formData.duration_nights || ''}
+                      onChange={(e) =>
+                        setFormData({ ...formData, duration_nights: parseInt(e.target.value) || 0 })
+                      }
+                      className="w-full px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-[#4A5B2D] focus:border-transparent"
+                      style={{ fontFamily: 'Gideon Roman' }}
+                    />
                   </div>
+                </div>
 
-                  {/* Trip Vibes */}
+                <div className="grid grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-900 mb-4">
-                      Trip Vibes (Rate 1-5)
+                    <label className="block text-sm font-medium text-gray-700 mb-2" style={{ fontFamily: 'Montserrat' }}>
+                      Base Price *
                     </label>
-                    <div className="space-y-4">
-                      {[
-                        { key: 'adventure_level', label: 'Adventure', emoji: '🏔️' },
-                        { key: 'spiritual_level', label: 'Spiritual', emoji: '🕉️' },
-                        { key: 'chill_level', label: 'Chill', emoji: '😌' },
-                        { key: 'nature_level', label: 'Nature', emoji: '🌿' },
-                        { key: 'cultural_level', label: 'Cultural', emoji: '🎭' },
-                      ].map(vibe => (
-                        <div key={vibe.key} className="flex items-center gap-4">
-                          <span className="text-2xl w-8">{vibe.emoji}</span>
-                          <span className="w-24 text-sm font-medium text-gray-900">{vibe.label}</span>
-                          <input
-                            type="range"
-                            min="1"
-                            max="5"
-                            value={formData[vibe.key as 'adventure_level' | 'spiritual_level' | 'chill_level' | 'nature_level' | 'cultural_level']}
-                            onChange={(e) => setFormData(prev => ({ ...prev, [vibe.key]: parseInt(e.target.value) }))}
-                            className="flex-1"
-                          />
-                          <span className="w-8 text-center font-medium text-[#4A5B2D]">
-                            {formData[vibe.key as 'adventure_level' | 'spiritual_level' | 'chill_level' | 'nature_level' | 'cultural_level']}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
+                    <input
+                      type="number"
+                      required
+                      min="0"
+                      step="0.01"
+                      value={formData.base_price || ''}
+                      onChange={(e) =>
+                        setFormData({ ...formData, base_price: parseFloat(e.target.value) || 0 })
+                      }
+                      className="w-full px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-[#4A5B2D] focus:border-transparent"
+                      style={{ fontFamily: 'Gideon Roman' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2" style={{ fontFamily: 'Montserrat' }}>
+                      Currency *
+                    </label>
+                    <select
+                      value={formData.currency}
+                      onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-[#4A5B2D] focus:border-transparent"
+                      style={{ fontFamily: 'Gideon Roman' }}
+                    >
+                      <option value="INR">INR</option>
+                      <option value="USD">USD</option>
+                      <option value="EUR">EUR</option>
+                      <option value="GBP">GBP</option>
+                    </select>
                   </div>
                 </div>
-              )}
 
-              {/* Pricing Tab */}
-              {activeTab === 'pricing' && (
-                <div className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-900 mb-2">
-                        Base Price (₹)
-                      </label>
-                      <input
-                        type="number"
-                        value={formData.base_price || ''}
-                        onChange={(e) => setFormData(prev => ({ ...prev, base_price: parseFloat(e.target.value) || 0 }))}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A5B2D] focus:border-transparent bg-white text-gray-900"
-                        placeholder="12999"
-                        min="0"
-                        step="100"
-                      />
-                    </div>
+                <div className="grid grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2" style={{ fontFamily: 'Montserrat' }}>
+                      Min Group Size
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={formData.group_size_min || ''}
+                      onChange={(e) =>
+                        setFormData({ ...formData, group_size_min: parseInt(e.target.value) || 1 })
+                      }
+                      className="w-full px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-[#4A5B2D] focus:border-transparent"
+                      style={{ fontFamily: 'Gideon Roman' }}
+                    />
+                  </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-900 mb-2">
-                        Currency
-                      </label>
-                      <select
-                        value={formData.currency}
-                        onChange={(e) => setFormData(prev => ({ ...prev, currency: e.target.value }))}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A5B2D] focus:border-transparent bg-white text-gray-900"
-                      >
-                        <option value="INR">INR (₹)</option>
-                        <option value="USD">USD ($)</option>
-                        <option value="EUR">EUR (€)</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-900 mb-2">
-                        Duration (Days)
-                      </label>
-                      <input
-                        type="number"
-                        value={formData.duration_days || ''}
-                        onChange={(e) => setFormData(prev => ({ ...prev, duration_days: parseInt(e.target.value) || 1 }))}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A5B2D] focus:border-transparent bg-white text-gray-900"
-                        min="1"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-900 mb-2">
-                        Duration (Nights)
-                      </label>
-                      <input
-                        type="number"
-                        value={formData.duration_nights || ''}
-                        onChange={(e) => setFormData(prev => ({ ...prev, duration_nights: parseInt(e.target.value) || 0 }))}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A5B2D] focus:border-transparent bg-white text-gray-900"
-                        min="0"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-900 mb-2">
-                        Min Group Size
-                      </label>
-                      <input
-                        type="number"
-                        value={formData.group_size_min || ''}
-                        onChange={(e) => setFormData(prev => ({ ...prev, group_size_min: parseInt(e.target.value) || 1 }))}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A5B2D] focus:border-transparent bg-white text-gray-900"
-                        min="1"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-900 mb-2">
-                        Max Group Size
-                      </label>
-                      <input
-                        type="number"
-                        value={formData.group_size_max || ''}
-                        onChange={(e) => setFormData(prev => ({ ...prev, group_size_max: parseInt(e.target.value) || 1 }))}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A5B2D] focus:border-transparent bg-white text-gray-900"
-                        min="1"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-900 mb-2">
-                        Minimum Age
-                      </label>
-                      <input
-                        type="number"
-                        value={formData.min_age || ''}
-                        onChange={(e) => setFormData(prev => ({ ...prev, min_age: parseInt(e.target.value) || 0 }))}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A5B2D] focus:border-transparent bg-white text-gray-900"
-                        min="0"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-900 mb-2">
-                        Maximum Age
-                      </label>
-                      <input
-                        type="number"
-                        value={formData.max_age || ''}
-                        onChange={(e) => setFormData(prev => ({ ...prev, max_age: parseInt(e.target.value) || 0 }))}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A5B2D] focus:border-transparent bg-white text-gray-900"
-                        min="0"
-                      />
-                    </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2" style={{ fontFamily: 'Montserrat' }}>
+                      Max Group Size
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={formData.group_size_max || ''}
+                      onChange={(e) =>
+                        setFormData({ ...formData, group_size_max: parseInt(e.target.value) || 20 })
+                      }
+                      className="w-full px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-[#4A5B2D] focus:border-transparent"
+                      style={{ fontFamily: 'Gideon Roman' }}
+                    />
                   </div>
                 </div>
-              )}
 
-              {/* Itinerary Tab */}
-              {activeTab === 'itinerary' && (
-                <ItineraryBuilder
-                  value={formData.itinerary}
-                  onChange={(days) => setFormData(prev => ({ ...prev, itinerary: days }))}
-                  totalDays={formData.duration_days}
-                />
-              )}
+                <div className="grid grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2" style={{ fontFamily: 'Montserrat' }}>
+                      Minimum Age
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={formData.min_age || ''}
+                      onChange={(e) =>
+                        setFormData({ ...formData, min_age: parseInt(e.target.value) || 10 })
+                      }
+                      className="w-full px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-[#4A5B2D] focus:border-transparent"
+                      style={{ fontFamily: 'Gideon Roman' }}
+                    />
+                  </div>
 
-              {/* Essentials Tab */}
-              {activeTab === 'essentials' && (
-                <EssentialsManager
-                  value={formData.essentials}
-                  onChange={(essentials) => setFormData(prev => ({ ...prev, essentials }))}
-                />
-              )}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2" style={{ fontFamily: 'Montserrat' }}>
+                      Maximum Age
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={formData.max_age || ''}
+                      onChange={(e) =>
+                        setFormData({ ...formData, max_age: parseInt(e.target.value) || 60 })
+                      }
+                      className="w-full px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-[#4A5B2D] focus:border-transparent"
+                      style={{ fontFamily: 'Gideon Roman' }}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
 
-              {/* Inclusions Tab */}
-              {activeTab === 'inclusions' && (
-                <InclusionsManager
-                  value={formData.inclusions}
-                  onChange={(inclusions) => setFormData(prev => ({ ...prev, inclusions }))}
-                />
-              )}
-
-              {/* Media Tab */}
-              {activeTab === 'media' && (
-                <div className="space-y-8">
+            {/* Media Tab */}
+            {activeTab === 'media' && (
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2" style={{ fontFamily: 'Montserrat' }}>
+                    Cover Image *
+                  </label>
                   <ImageUpload
                     value={formData.cover_image}
-                    onChange={(url) => setFormData(prev => ({ ...prev, cover_image: url }))}
+                    onChange={(url: string) => setFormData({ ...formData, cover_image: url })}
                     bucket="tour-images"
-                    label="Cover Image (Main tour image)"
                   />
+                </div>
 
-                  <div className="border-t border-gray-200 pt-8">
-                    <ImageGalleryUpload
-                      value={formData.gallery_images}
-                      onChange={(urls) => setFormData(prev => ({ ...prev, gallery_images: urls }))}
-                      bucket="tour-images"
-                      label="Gallery Images (Multiple images for tour gallery)"
-                      maxImages={10}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2" style={{ fontFamily: 'Montserrat' }}>
+                    Gallery Images
+                  </label>
+                  <ImageGalleryUpload
+                    value={formData.gallery_images}
+                    onChange={(urls: string[]) => setFormData({ ...formData, gallery_images: urls })}
+                    bucket="tour-images"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2" style={{ fontFamily: 'Montserrat' }}>
+                    Tour Itinerary PDF
+                  </label>
+                  <p className="text-sm text-gray-600 mb-2">Upload a detailed PDF itinerary for customers to download</p>
+                  <PDFUpload
+                    value={formData.pdf_itinerary}
+                    onChange={(url: string) => setFormData({ ...formData, pdf_itinerary: url })}
+                    bucket="tour-documents"
+                    label="Upload Itinerary PDF"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2" style={{ fontFamily: 'Montserrat' }}>
+                    Terms & Conditions PDF
+                  </label>
+                  <p className="text-sm text-gray-600 mb-2">Upload terms and conditions document</p>
+                  <PDFUpload
+                    value={formData.pdf_terms}
+                    onChange={(url: string) => setFormData({ ...formData, pdf_terms: url })}
+                    bucket="tour-documents"
+                    label="Upload Terms PDF"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Features Tab */}
+            {activeTab === 'features' && (
+              <div className="space-y-6">
+                <div className="flex items-center gap-6 mb-6">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={formData.is_featured}
+                      onChange={(e) => setFormData({ ...formData, is_featured: e.target.checked })}
+                      className="w-4 h-4 text-[#4A5B2D] border-gray-300 rounded focus:ring-[#4A5B2D]"
                     />
+                    <span className="text-sm font-medium text-gray-700" style={{ fontFamily: 'Montserrat' }}>
+                      Featured Tour
+                    </span>
+                  </label>
+
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={formData.is_bestseller}
+                      onChange={(e) => setFormData({ ...formData, is_bestseller: e.target.checked })}
+                      className="w-4 h-4 text-[#4A5B2D] border-gray-300 rounded focus:ring-[#4A5B2D]"
+                    />
+                    <span className="text-sm font-medium text-gray-700" style={{ fontFamily: 'Montserrat' }}>
+                      Bestseller
+                    </span>
+                  </label>
+                </div>
+
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4" style={{ fontFamily: 'Montserrat' }}>
+                    Trip Vibe Check (1-5 rating)
+                  </h3>
+                  <p className="text-sm text-gray-600 mb-4" style={{ fontFamily: 'Gideon Roman' }}>
+                    Rate each vibe from 1 to 5. Set to 0 to hide that vibe.
+                  </p>
+
+                  <div className="grid grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2" style={{ fontFamily: 'Montserrat' }}>
+                        🔥 Adventure Level (1-5)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="5"
+                        value={formData.adventure_level || ''}
+                        onChange={(e) =>
+                          setFormData({ ...formData, adventure_level: parseInt(e.target.value) || 0 })
+                        }
+                        className="w-full px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-[#4A5B2D] focus:border-transparent bg-white text-gray-900"
+                        style={{ fontFamily: 'Gideon Roman' }}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2" style={{ fontFamily: 'Montserrat' }}>
+                        🌲 Nature Level (1-5)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="5"
+                        value={formData.nature_level || ''}
+                        onChange={(e) =>
+                          setFormData({ ...formData, nature_level: parseInt(e.target.value) || 0 })
+                        }
+                        className="w-full px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-[#4A5B2D] focus:border-transparent bg-white text-gray-900"
+                        style={{ fontFamily: 'Gideon Roman' }}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2" style={{ fontFamily: 'Montserrat' }}>
+                        🙏 Spiritual Level (1-5)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="5"
+                        value={formData.spiritual_level || ''}
+                        onChange={(e) =>
+                          setFormData({ ...formData, spiritual_level: parseInt(e.target.value) || 0 })
+                        }
+                        className="w-full px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-[#4A5B2D] focus:border-transparent bg-white text-gray-900"
+                        style={{ fontFamily: 'Gideon Roman' }}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2" style={{ fontFamily: 'Montserrat' }}>
+                        😎 Chill Level (1-5)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="5"
+                        value={formData.chill_level || ''}
+                        onChange={(e) =>
+                          setFormData({ ...formData, chill_level: parseInt(e.target.value) || 0 })
+                        }
+                        className="w-full px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-[#4A5B2D] focus:border-transparent bg-white text-gray-900"
+                        style={{ fontFamily: 'Gideon Roman' }}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2" style={{ fontFamily: 'Montserrat' }}>
+                        🏛️ Cultural Level (1-5)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="5"
+                        value={formData.cultural_level || ''}
+                        onChange={(e) =>
+                          setFormData({ ...formData, cultural_level: parseInt(e.target.value) || 0 })
+                        }
+                        className="w-full px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-[#4A5B2D] focus:border-transparent bg-white text-gray-900"
+                        style={{ fontFamily: 'Gideon Roman' }}
+                      />
+                    </div>
                   </div>
                 </div>
-              )}
+              </div>
+            )}
 
-              {/* Features & SEO Tab */}
-              {activeTab === 'features' && (
-                <div className="space-y-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-900 mb-4">
-                      Tour Features
-                    </label>
-                    <div className="space-y-3">
-                      <label className="flex items-center gap-3 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={formData.is_featured}
-                          onChange={(e) => setFormData(prev => ({ ...prev, is_featured: e.target.checked }))}
-                          className="w-5 h-5 text-[#4A5B2D] border-gray-300 rounded focus:ring-[#4A5B2D]"
-                        />
-                        <span className="text-gray-900">Featured Tour (Show on homepage)</span>
-                      </label>
-                      <label className="flex items-center gap-3 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={formData.is_bestseller}
-                          onChange={(e) => setFormData(prev => ({ ...prev, is_bestseller: e.target.checked }))}
-                          className="w-5 h-5 text-[#4A5B2D] border-gray-300 rounded focus:ring-[#4A5B2D]"
-                        />
-                        <span className="text-gray-900">Bestseller (Mark as popular)</span>
-                      </label>
-                    </div>
-                  </div>
+            {/* Itinerary Tab */}
+            {activeTab === 'itinerary' && (
+              <div>
+                <ItineraryBuilder
+                  value={formData.itinerary}
+                  onChange={(itinerary: ItineraryDay[]) => setFormData({ ...formData, itinerary })}
+                  totalDays={formData.duration_days}
+                />
+              </div>
+            )}
 
-                  <div className="border-t border-gray-200 pt-6">
-                    <label className="block text-sm font-medium text-gray-900 mb-4">
-                      SEO Settings
-                    </label>
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm text-gray-700 mb-2">
-                          SEO Title
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.seo_title}
-                          onChange={(e) => setFormData(prev => ({ ...prev, seo_title: e.target.value }))}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A5B2D] focus:border-transparent bg-white text-gray-900"
-                          placeholder="Leave empty to use tour title"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm text-gray-700 mb-2">
-                          SEO Description
-                        </label>
-                        <textarea
-                          value={formData.seo_description}
-                          onChange={(e) => setFormData(prev => ({ ...prev, seo_description: e.target.value }))}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A5B2D] focus:border-transparent bg-white text-gray-900"
-                          rows={3}
-                          placeholder="Brief description for search engines (150-160 characters recommended)"
-                        />
-                        <p className="text-xs text-gray-500 mt-1">
-                          {formData.seo_description.length}/160 characters
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+            {/* Essentials Tab */}
+            {activeTab === 'essentials' && (
+              <div>
+                <EssentialsManager
+                  value={formData.essentials}
+                  onChange={(essentials: Essential[]) => setFormData({ ...formData, essentials })}
+                />
+              </div>
+            )}
 
-                  {/* Note about Departure Dates */}
-                  <div className="border-t border-gray-200 pt-6">
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                      <div className="flex items-start gap-3">
-                        <svg className="w-5 h-5 text-blue-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <div>
-                          <h4 className="text-sm font-medium text-blue-900 mb-1">Departure Dates</h4>
-                          <p className="text-sm text-blue-700">
-                            You can add specific departure dates and manage availability after creating the tour. 
-                            This will allow customers to see available trip dates and book accordingly.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
+            {/* Inclusions Tab */}
+            {activeTab === 'inclusions' && (
+              <div>
+                <InclusionsManager
+                  value={formData.inclusions}
+                  onChange={(inclusions: Inclusion[]) => setFormData({ ...formData, inclusions })}
+                />
+              </div>
+            )}
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex items-center justify-between bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          {/* Form Actions */}
+          <div className="mt-6 flex justify-end gap-4">
             <button
               type="button"
-              onClick={() => router.back()}
-              className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+              onClick={() => router.push('/admin/dashboard/tours')}
+              className="px-6 py-3 bg-white border border-gray-300 text-gray-900 font-medium rounded hover:bg-gray-50"
+              style={{ fontFamily: 'Gideon Roman' }}
+              disabled={saving}
             >
               Cancel
             </button>
-            <div className="flex gap-3">
-              <button
-                type="submit"
-                disabled={saving}
-                onClick={() => setFormData(prev => ({ ...prev, status: 'draft' }))}
-                className="px-6 py-3 border border-[#4A5B2D] text-[#4A5B2D] rounded-lg hover:bg-[#4A5B2D]/5 transition-colors font-medium disabled:opacity-50"
-              >
-                {saving ? 'Saving...' : 'Save as Draft'}
-              </button>
-              <button
-                type="submit"
-                disabled={saving}
-                onClick={() => setFormData(prev => ({ ...prev, status: 'published' }))}
-                className="px-6 py-3 bg-[#4A5B2D] text-white rounded-lg hover:bg-[#3d4a24] transition-colors font-medium disabled:opacity-50"
-              >
-                {saving ? 'Publishing...' : 'Publish Tour'}
-              </button>
-            </div>
+            <button
+              type="submit"
+              disabled={saving}
+              className="px-6 py-3 bg-[#4A5B2D] text-white font-medium rounded hover:bg-[#3d4a24] disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ fontFamily: 'Montserrat' }}
+            >
+              {saving ? 'Creating...' : 'Create Tour'}
+            </button>
           </div>
         </form>
       </div>
